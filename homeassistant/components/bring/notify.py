@@ -50,7 +50,8 @@ class BringNotificationService(BaseNotificationService):
     @property
     def targets(self) -> dict[str, str]:
         """Return a dictionary of registered targets."""
-        return {"Bring! Einkaufsliste (Username)": "listuuid"}
+        return {"Einkaufsliste (Username)": "listuuid"}
 
     def send_message(self, message: str = "", **kwargs: Any) -> None:
         """Send a message to a user."""
+        _LOGGER.debug("Got message %s", message)

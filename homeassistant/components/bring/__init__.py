@@ -14,6 +14,8 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_EMAIL, CONF_PASSWORD, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryError, ConfigEntryNotReady
+from homeassistant.helpers.discovery import async_load_platform
+from homeassistant.helpers.typing import ConfigType
 
 from .const import DOMAIN
 from .coordinator import BringDataUpdateCoordinator
@@ -21,6 +23,15 @@ from .coordinator import BringDataUpdateCoordinator
 PLATFORMS: list[Platform] = [Platform.TODO]
 
 _LOGGER = logging.getLogger(__name__)
+
+
+async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+    """Set up the Bring! component."""
+
+    hass.async_create_task(
+        async_load_platform(hass, Platform.NOTIFY, DOMAIN, {}, config)
+    )
+    return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
