@@ -1,0 +1,26 @@
+notify:
+  fields:
+    bring_list:
+      required: true
+      example: todo.bring_shoppinglist
+      selector:
+        entity:
+          domain: todo
+          integration: bring
+    notification_type:
+      example: GOING_SHOPPING
+      required: true
+      default: "GOING_SHOPPING"
+      selector:
+        select:
+          translation_key: "notification_type_selector"
+          options:
+            - "GOING_SHOPPING"
+            - "CHANGED_LIST"
+            - "SHOPPING_DONE"
+            - "URGENT_MESSAGE"
+    item_name:
+      example: Cilantro
+      required: false
+      selector:
+        text:

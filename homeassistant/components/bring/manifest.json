@@ -7,7 +7,7 @@
   "documentation": "https://www.home-assistant.io/integrations/bring",
   "homekit": {},
   "iot_class": "cloud_polling",
-  "requirements": ["python-bring-api==2.0.0"],
+  "requirements": ["python-bring-api==2.1.0"],
   "ssdp": [],
   "zeroconf": []
 }

@@ -28,10 +28,10 @@ _LOGGER = logging.getLogger(__name__)
 #         config[CONF_PASSWORD],
 #     )
 
-EVENT_NOTIFY = "notify"
+# EVENT_NOTIFY = "notify"
 
 
-def get_service(
+async def async_get_service(
     hass: HomeAssistant,
     config: ConfigType,
     discovery_info: DiscoveryInfoType | None = None,
