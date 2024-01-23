@@ -17,13 +17,13 @@ from .const import DOMAIN
 _LOGGER = logging.getLogger(__name__)
 
 
-class Data(BringList):
+class BringData(BringList):
     """Coordinator data class."""
 
     items: list[BringItemsResponse]
 
 
-class BringDataUpdateCoordinator(DataUpdateCoordinator[list[Data]]):
+class BringDataUpdateCoordinator(DataUpdateCoordinator[list[BringData]]):
     """A Bring Data Update Coordinator."""
 
     config_entry: ConfigEntry
@@ -36,17 +36,12 @@ class BringDataUpdateCoordinator(DataUpdateCoordinator[list[Data]]):
             name=DOMAIN,
             update_interval=timedelta(seconds=90),
         )
-        self._bring = bring
+        self.bring = bring
 
-    @property
-    def bring(self):
-        """Return the bring api."""
-        return self._bring
-
-    async def _async_update_data(self) -> list[Data]:
+    async def _async_update_data(self) -> list[BringData]:
         try:
             lists_response = await self.hass.async_add_executor_job(
-                self._bring.loadLists
+                self.bring.loadLists
             )
             lists = lists_response["lists"]
         except BringRequestException as e:
@@ -56,20 +51,17 @@ class BringDataUpdateCoordinator(DataUpdateCoordinator[list[Data]]):
             _LOGGER.warning("Unable to parse response from bring")
             raise UpdateFailed from e
 
-        for _list in lists:
+        for lst in lists:
             try:
-
-                def _sync():
-                    nonlocal _list
-                    return self._bring.getItems(_list["listUuid"])  # noqa: B023
-
-                items = await self.hass.async_add_executor_job(_sync)
-                _list["items"] = items["purchase"]
+                items = await self.hass.async_add_executor_job(
+                    self.bring.getItems, lst["listUuid"]
+                )
             except BringRequestException as e:
                 _LOGGER.warning("Unable to connect and retrieve data from bring")
                 raise UpdateFailed from e
             except BringParseException as e:
                 _LOGGER.warning("Unable to parse response from bring")
                 raise UpdateFailed from e
+            lst["items"] = items["purchase"]
 
         return lists
