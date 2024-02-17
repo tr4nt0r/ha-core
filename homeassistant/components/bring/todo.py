@@ -101,8 +101,8 @@ class BringTodoListEntity(
         """Return the todo items."""
         return [
             TodoItem(
-                uid=item["name"],
-                summary=item["name"],
+                uid=item["itemId"],
+                summary=item["itemId"],
                 description=item["specification"] or "",
                 status=TodoItemStatus.NEEDS_ACTION,
             )
@@ -117,7 +117,7 @@ class BringTodoListEntity(
     async def async_create_todo_item(self, item: TodoItem) -> None:
         """Add an item to the To-do list."""
         try:
-            await self.coordinator.bring.saveItemAsync(
+            await self.coordinator.bring.saveItem(
                 self.bring_list["listUuid"], item.summary, item.description or ""
             )
         except BringRequestException as e:
@@ -149,14 +149,14 @@ class BringTodoListEntity(
             assert item.uid
 
         if item.status == TodoItemStatus.COMPLETED:
-            await self.coordinator.bring.removeItemAsync(
+            await self.coordinator.bring.removeItem(
                 bring_list["listUuid"],
                 item.uid,
             )
 
         elif item.summary == item.uid:
             try:
-                await self.coordinator.bring.updateItemAsync(
+                await self.coordinator.bring.updateItem(
                     bring_list["listUuid"],
                     item.uid,
                     item.description or "",
@@ -165,11 +165,11 @@ class BringTodoListEntity(
                 raise HomeAssistantError("Unable to update todo item for bring") from e
         else:
             try:
-                await self.coordinator.bring.removeItemAsync(
+                await self.coordinator.bring.removeItem(
                     bring_list["listUuid"],
                     item.uid,
                 )
-                await self.coordinator.bring.saveItemAsync(
+                await self.coordinator.bring.saveItem(
                     bring_list["listUuid"],
                     item.summary,
                     item.description or "",
@@ -183,7 +183,7 @@ class BringTodoListEntity(
         """Delete an item from the To-do list."""
         for uid in uids:
             try:
-                await self.coordinator.bring.removeItemAsync(
+                await self.coordinator.bring.removeItem(
                     self.bring_list["listUuid"], uid
                 )
             except BringRequestException as e:
