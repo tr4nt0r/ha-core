@@ -394,6 +394,7 @@ FLOWS = {
         "philips_js",
         "pi_hole",
         "picnic",
+        "pinecil",
         "ping",
         "plaato",
         "plex",

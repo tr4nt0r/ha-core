@@ -1541,6 +1541,9 @@ pigpio==1.78
 # homeassistant.components.pilight
 pilight==0.1.1
 
+# homeassistant.components.pinecil
+pinecil==0.2.14
+
 # homeassistant.components.dominos
 pizzapi==0.0.3
 

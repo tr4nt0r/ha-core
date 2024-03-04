@@ -453,6 +453,14 @@ BLUETOOTH: list[dict[str, bool | str | int | list[int]]] = [
         "manufacturer_id": 220,
     },
     {
+        "domain": "pinecil",
+        "service_uuid": "9eae1adb-9d0d-48c5-a6e7-ae93f0ea37b0",
+    },
+    {
+        "domain": "pinecil",
+        "service_uuid": "9eae1000-9d0d-48c5-aa55-33e27f9bc533",
+    },
+    {
         "connectable": False,
         "domain": "qingping",
         "local_name": "Qingping*",

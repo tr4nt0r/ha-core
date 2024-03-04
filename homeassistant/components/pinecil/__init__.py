@@ -1,0 +1,101 @@
+"""The Pinecil integration."""
+
+from __future__ import annotations
+
+from datetime import timedelta
+import logging
+
+import async_timeout
+
+from homeassistant.components import bluetooth
+from homeassistant.components.bluetooth.match import ADDRESS, BluetoothCallbackMatcher
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import EVENT_HOMEASSISTANT_STOP, Platform
+from homeassistant.core import Event, HomeAssistant, callback
+from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+
+from .const import DEVICE_TIMEOUT, DOMAIN, UPDATE_SECONDS
+from .models import PinecilWrapper
+
+PLATFORMS: list[Platform] = [Platform.NUMBER, Platform.SENSOR]
+_LOGGER = logging.getLogger(__name__)
+
+
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Set up Pinecil from a config entry."""
+    # address: str = entry.data[CONF_MAC]
+    address = entry.unique_id
+    assert address is not None
+    ble_device = bluetooth.async_ble_device_from_address(hass, address.upper(), True)
+    if not ble_device:
+        raise ConfigEntryNotReady(
+            f"Could not find Pinecil device with address {address}"
+        )
+
+    async def _async_update():
+        """Update the device state."""
+        await pinecil.update()
+
+    coordinator = DataUpdateCoordinator(
+        hass,
+        _LOGGER,
+        name=DOMAIN,
+        update_method=_async_update,
+        update_interval=timedelta(seconds=UPDATE_SECONDS),
+    )
+
+    pinecil = PinecilWrapper(entry.title, coordinator)
+
+    @callback
+    def _async_update_ble(
+        service_info: bluetooth.BluetoothServiceInfoBleak,
+        change: bluetooth.BluetoothChange,
+    ) -> None:
+        """Update from a ble callback."""
+        pinecil.set_ble_device(service_info.device)
+
+    entry.async_on_unload(
+        bluetooth.async_register_callback(
+            hass,
+            _async_update_ble,
+            BluetoothCallbackMatcher({ADDRESS: address}),
+            bluetooth.BluetoothScanningMode.PASSIVE,
+        )
+    )
+
+    try:
+        async with async_timeout.timeout(DEVICE_TIMEOUT):
+            await coordinator.async_config_entry_first_refresh()
+    except TimeoutError as ex:
+        raise ConfigEntryNotReady(
+            "Unable to communicate with the device; "
+            f"Try moving the Bluetooth adapter closer to {DOMAIN}"
+        ) from ex
+
+    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = pinecil
+
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    entry.async_on_unload(entry.add_update_listener(_async_update_listener))
+
+    async def _async_stop(event: Event) -> None:
+        """Close the connection."""
+        pinecil.disconnect()
+
+    entry.async_on_unload(
+        hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _async_stop)
+    )
+    return True
+
+
+async def _async_update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Handle options update."""
+    data = hass.data[DOMAIN][entry.entry_id]
+    data.device.gatherdata()
+
+
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Unload a config entry."""
+    data = hass.data[DOMAIN][entry.entry_id]
+    data.device.disconnect()
+    return True
