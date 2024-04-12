@@ -21,20 +21,26 @@
   },
   "entity": {
     "sensor": {
-      "live_temp": {
+      "live_temperature": {
         "name": "Tip temperature"
       },
       "voltage": {
-        "name": "DC Voltage"
+        "name": "DC Input Voltage"
       },
-      "handle_temp": {
+      "handle_temperature": {
         "name": "Handle Temperature"
       },
-      "pwm_level": {
-        "name": "Power PWM"
+      "power_pwm_level": {
+        "name": "Power Level"
       },
       "power_source": {
-        "name": "Power Source"
+        "name": "Power Source",
+        "state": {
+          "dc": "DC Input",
+          "qc": "USB Quick Charge",
+          "pd_vbus": "USB Power Delivery VBUS",
+          "pd": "USB Power Delivery"
+        }
       },
       "tip_resistance": {
         "name": "Tip Resistance"
@@ -48,17 +54,24 @@
       "max_tip_temp_ability": {
         "name": "Max Tip Temperature"
       },
-      "u_volts_tip": {
+      "tip_voltage": {
         "name": "Raw Tip Voltage"
       },
       "hall_sensor": {
-        "name": "Hall Effect"
+        "name": "Hall Effect Strength"
       },
       "operating_mode": {
-        "name": "Operating Mode"
+        "name": "Operating Mode",
+        "state": {
+          "idle": "Idle",
+          "soldering": "Soldering",
+          "sleeping": "Sleeping",
+          "settings": "Settings",
+          "debug": "Debug"
+        }
       },
-      "power": {
-        "name": "Power"
+      "estimated_power": {
+        "name": "Estimated Power"
       }
     }
   }

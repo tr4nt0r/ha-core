@@ -6,9 +6,11 @@ import logging
 
 from pinecil import BLE, Pinecil
 
+from homeassistant.components.bluetooth import async_ble_device_from_address
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_ADDRESS, Platform
+from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryNotReady
 
 from .const import DOMAIN
 from .coordinator import PinecilCoordinator
@@ -20,12 +22,19 @@ PLATFORMS: list[Platform] = [Platform.SENSOR]
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Pinecil from a config entry."""
-    _LOGGER.debug("Setting up entry from config %s", entry.data)
+    _LOGGER.debug("Setting up entry from config %s", entry)
+    assert entry.unique_id
 
-    pinecil = Pinecil(BLE(entry.data[CONF_ADDRESS]))
+    ble_device = async_ble_device_from_address(hass, entry.unique_id, True)
+    if not ble_device:
+        _LOGGER.debug("Device not found %s", entry.title)
+        raise ConfigEntryNotReady(f"Could not find device {entry.title}")
 
-    coordinator = PinecilCoordinator(hass, pinecil)
+    pinecil = Pinecil(BLE(entry.unique_id))
+
+    coordinator = PinecilCoordinator(hass, pinecil, ble_device, entry)
     await coordinator.async_config_entry_first_refresh()
+
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
