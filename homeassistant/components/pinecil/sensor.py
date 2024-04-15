@@ -6,6 +6,9 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
+from homeassistant.components.bluetooth.passive_update_coordinator import (
+    PassiveBluetoothCoordinatorEntity,
+)
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
@@ -22,10 +25,9 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN, OHM, OPERATING_MODES, POWER_SOURCES, PinecilEntity
-from .coordinator import PinecilCoordinator
+from .coordinator import PinecilActiveBluetoothDataUpdateCoordinator
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -154,7 +156,7 @@ async def async_setup_entry(
     )
 
 
-class PinecilSensor(CoordinatorEntity, SensorEntity):
+class PinecilSensor(PassiveBluetoothCoordinatorEntity, SensorEntity):
     """Implementation of a Pinecil sensor."""
 
     _attr_has_entity_name = True
@@ -162,7 +164,7 @@ class PinecilSensor(CoordinatorEntity, SensorEntity):
 
     def __init__(
         self,
-        coordinator: PinecilCoordinator,
+        coordinator: PinecilActiveBluetoothDataUpdateCoordinator,
         entity_description: PinecilSensorEntityDescription,
         entry: ConfigEntry,
     ) -> None:
@@ -171,10 +173,11 @@ class PinecilSensor(CoordinatorEntity, SensorEntity):
         assert entry.unique_id
         self.entity_description = entity_description
         self._attr_unique_id = f"{entry.unique_id}_{entity_description.key}"
-
+        self.coordinator = coordinator
         self._attr_device_info = coordinator.device_info
 
     @property
     def native_value(self) -> float | int | str | None:
         """Return sensor state."""
-        return self.entity_description.value_fn(self.coordinator.data)
+
+        return self.coordinator.device.data.get(self.entity_description.key)

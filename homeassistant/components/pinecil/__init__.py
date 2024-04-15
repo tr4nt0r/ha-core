@@ -4,8 +4,6 @@ from __future__ import annotations
 
 import logging
 
-from pinecil import BLE, Pinecil
-
 from homeassistant.components.bluetooth import async_ble_device_from_address
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
@@ -13,7 +11,8 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 
 from .const import DOMAIN
-from .coordinator import PinecilCoordinator
+from .coordinator import PinecilActiveBluetoothDataUpdateCoordinator
+from .pinecil import Pinecil
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -30,14 +29,22 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.debug("Device not found %s", entry.title)
         raise ConfigEntryNotReady(f"Could not find device {entry.title}")
 
-    pinecil = Pinecil(BLE(entry.unique_id))
+    pinecil = Pinecil(ble_device)
 
-    coordinator = PinecilCoordinator(hass, pinecil, ble_device, entry)
-    await coordinator.async_config_entry_first_refresh()
+    coordinator = hass.data.setdefault(DOMAIN, {})[entry.entry_id] = (
+        PinecilActiveBluetoothDataUpdateCoordinator(
+            hass,
+            _LOGGER,
+            ble_device,
+            pinecil,
+        )
+    )
 
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-
+    entry.async_on_unload(
+        # only start after all platforms have had a chance to subscribe
+        coordinator.async_start()
+    )
     return True
 
 
