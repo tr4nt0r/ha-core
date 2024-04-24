@@ -31,6 +31,7 @@ class PyLoadSensorEntity(StrEnum):
     TOTAL = "total"
     SPEED = "speed"
     FREE_SPACE = "free_space"
+    FREE_SPACE = "free_space"
 
 
 SENSOR_DESCRIPTIONS: dict[str, SensorEntityDescription] = {
