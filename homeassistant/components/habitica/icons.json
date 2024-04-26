@@ -1,5 +1,19 @@
 {
   "entity": {
+    "todo": {
+      "todos": {
+        "default": "mdi:checkbox-outline"
+      },
+      "dailies": {
+        "default": "mdi:calendar-month"
+      },
+      "habits": {
+        "default": "mdi:contrast-box"
+      },
+      "rewards": {
+        "default": "mdi:treasure-chest"
+      }
+    },
     "sensor": {
       "display_name": {
         "default": "mdi:account-circle"

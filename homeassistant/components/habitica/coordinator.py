@@ -3,7 +3,6 @@
 from datetime import timedelta
 from http import HTTPStatus
 import logging
-from typing import Any
 
 from aiohttp import ClientResponseError
 
@@ -19,7 +18,7 @@ MIN_TIME_BETWEEN_UPDATES = timedelta(minutes=1)
 class HabitipyData:
     """Habitica API user data cache."""
 
-    tasks: dict[str, Any] = {}
+    tasks: list = []
 
     def __init__(self, api) -> None:
         """Habitica API user data cache."""
@@ -47,21 +46,24 @@ class HabitipyData:
                     error,
                 )
 
-        for task_type in ("habits", "dailys", "todos", "rewards", "completedTodos"):
-            try:
-                self.tasks[task_type] = await self.api.tasks.user.get(type=task_type)
-            except ClientResponseError as error:
-                if error.status == HTTPStatus.TOO_MANY_REQUESTS:
-                    _LOGGER.warning(
-                        (
-                            "Sensor data update for %s has too many API requests;"
-                            " Skipping the update"
-                        ),
-                        DOMAIN,
-                    )
-                else:
-                    _LOGGER.error(
-                        "Count not update sensor data for %s (%s)",
-                        DOMAIN,
-                        error,
-                    )
+        try:
+            self.tasks = [
+                *await self.api.tasks.user.get(),
+                *await self.api.tasks.user.get(type="completedTodos"),
+            ]
+
+        except ClientResponseError as error:
+            if error.status == HTTPStatus.TOO_MANY_REQUESTS:
+                _LOGGER.warning(
+                    (
+                        "Sensor data update for %s has too many API requests;"
+                        " Skipping the update"
+                    ),
+                    DOMAIN,
+                )
+            else:
+                _LOGGER.error(
+                    "Count not update sensor data for %s (%s)",
+                    DOMAIN,
+                    error,
+                )

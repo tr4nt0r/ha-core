@@ -57,6 +57,20 @@
           "rogue": "Rogue"
         }
       }
+    },
+    "todo": {
+      "todos": {
+        "name": "To-Do's"
+      },
+      "dailies": {
+        "name": "Dailies"
+      },
+      "habits": {
+        "name": "Habits"
+      },
+      "rewards": {
+        "name": "Rewards"
+      }
     }
   },
   "issues": {

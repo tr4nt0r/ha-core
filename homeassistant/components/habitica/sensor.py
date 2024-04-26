@@ -121,14 +121,14 @@ SENSOR_DESCRIPTIONS: dict[str, HabitipySensorEntityDescription] = {
 SensorType = namedtuple("SensorType", ["name", "icon", "unit", "path"])
 TASKS_TYPES = {
     "habits": SensorType(
-        "Habits", "mdi:clipboard-list-outline", "n_of_tasks", ["habits"]
+        "Habits", "mdi:clipboard-list-outline", "n_of_tasks", ["habit"]
     ),
     "dailys": SensorType(
-        "Dailys", "mdi:clipboard-list-outline", "n_of_tasks", ["dailys"]
+        "Dailys", "mdi:clipboard-list-outline", "n_of_tasks", ["daily"]
     ),
-    "todos": SensorType("TODOs", "mdi:clipboard-list-outline", "n_of_tasks", ["todos"]),
+    "todos": SensorType("TODOs", "mdi:clipboard-list-outline", "n_of_tasks", ["todo"]),
     "rewards": SensorType(
-        "Rewards", "mdi:clipboard-list-outline", "n_of_tasks", ["rewards"]
+        "Rewards", "mdi:clipboard-list-outline", "n_of_tasks", ["reward"]
     ),
 }
 
@@ -251,7 +251,6 @@ class HabitipyTaskSensor(SensorEntity):
 
     def __init__(self, name, task_name, updater, entry):
         """Initialize a generic Habitica task."""
-        # self.hass = hass
         self._name = name
         self._task_name = task_name
         self._task_type = TASKS_TYPES[task_name]
@@ -271,8 +270,12 @@ class HabitipyTaskSensor(SensorEntity):
         """Update Condition and Forecast."""
         await self._updater.update()
         all_tasks = self._updater.tasks
-        for element in self._task_type.path:
-            tasks_length = len(all_tasks[element])
+        tasks_length = sum(
+            1
+            for task in all_tasks
+            if task.get("type") in self._task_type.path
+            and not task.get("completed", False)
+        )
         self._state = tasks_length
 
     async def async_added_to_hass(self) -> None:
@@ -317,19 +320,18 @@ class HabitipyTaskSensor(SensorEntity):
     def extra_state_attributes(self):
         """Return the state attributes of all user tasks."""
         if self._updater.tasks is not None:
-            all_received_tasks = self._updater.tasks
-            for element in self._task_type.path:
-                received_tasks = all_received_tasks[element]
+            received_tasks = self._updater.tasks
             attrs = {}
 
             # Map tasks to TASKS_MAP
             for received_task in received_tasks:
-                task_id = received_task[TASKS_MAP_ID]
-                task = {}
-                for map_key, map_value in TASKS_MAP.items():
-                    if value := received_task.get(map_value):
-                        task[map_key] = value
-                attrs[task_id] = task
+                if received_task.get("type") in self._task_type.path:
+                    task_id = received_task[TASKS_MAP_ID]
+                    task = {}
+                    for map_key, map_value in TASKS_MAP.items():
+                        if value := received_task.get(map_value):
+                            task[map_key] = value
+                    attrs[task_id] = task
             return attrs
 
     @property
