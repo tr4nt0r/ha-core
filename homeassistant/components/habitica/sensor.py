@@ -19,6 +19,11 @@ from homeassistant.const import CONF_NAME, CONF_URL
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.issue_registry import (
+    IssueSeverity,
+    async_create_issue,
+    async_delete_issue,
+)
 
 from .const import DOMAIN, MANUFACTURER, NAME
 
@@ -39,6 +44,7 @@ class HabitipySensorEntity(StrEnum):
 
     DISPLAY_NAME = "display_name"
     HEALTH = "health"
+    HEALTH_MAX = "health_max"
     MANA = "mana"
     MANA_MAX = "mana_max"
     EXPERIENCE = "experience"
@@ -171,6 +177,7 @@ async def async_setup_entry(
         HabitipySensor(sensor_data, description, config_entry)
         for description in SENSOR_DESCRIPTIONS.values()
     ]
+    # Task sensors are deprecated and will be removed in 2024.12
     entities.extend(
         HabitipyTaskSensor(name, task_type, sensor_data, config_entry)
         for task_type in TASKS_TYPES
@@ -214,12 +221,39 @@ class HabitipySensor(SensorEntity):
             data = data[element]
         self._attr_native_value = data
 
+    async def async_added_to_hass(self) -> None:
+        """Raise issue when entity is registered and was not disabled."""
+        if self.entity_description.key == HabitipySensorEntity.HEALTH_MAX:
+            if self.enabled:
+                name = self.name
+                async_create_issue(
+                    self.hass,
+                    DOMAIN,
+                    f"deprecated_sensor_entity_{self.entity_description.key}",
+                    breaks_in_ha_version="2024.12.0",
+                    is_fixable=False,
+                    severity=IssueSeverity.WARNING,
+                    translation_key="deprecated_sensor_entity",
+                    translation_placeholders={
+                        "entity_name": str(name),
+                        "entity": self.entity_id,
+                    },
+                )
+            else:
+                async_delete_issue(
+                    self.hass,
+                    DOMAIN,
+                    f"deprecated_sensor_entity_{self.entity_description.key}",
+                )
 
+
+# Task sensors are deprecated and will be removed in 2024.12
 class HabitipyTaskSensor(SensorEntity):
     """A Habitica task sensor."""
 
     def __init__(self, name, task_name, updater, entry):
         """Initialize a generic Habitica task."""
+        # self.hass = hass
         self._name = name
         self._task_name = task_name
         self._task_type = TASKS_TYPES[task_name]
@@ -242,6 +276,29 @@ class HabitipyTaskSensor(SensorEntity):
         for element in self._task_type.path:
             tasks_length = len(all_tasks[element])
         self._state = tasks_length
+
+    async def async_added_to_hass(self) -> None:
+        """Raise issue when entity is registered and was not disabled."""
+        if self.enabled:
+            async_create_issue(
+                self.hass,
+                DOMAIN,
+                f"deprecated_task_entity_{self._task_name}",
+                breaks_in_ha_version="2024.12.0",
+                is_fixable=False,
+                severity=IssueSeverity.WARNING,
+                translation_key="deprecated_task_entity",
+                translation_placeholders={
+                    "task_name": self._task_name,
+                    "entity": f"sensor.habitica_{self._name}_{self._task_name}",
+                },
+            )
+        else:
+            async_delete_issue(
+                self.hass,
+                DOMAIN,
+                f"deprecated_task_entity_{self._task_name}",
+            )
 
     @property
     def icon(self):
