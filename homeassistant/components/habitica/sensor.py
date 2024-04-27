@@ -4,9 +4,7 @@ from __future__ import annotations
 
 from collections import namedtuple
 from dataclasses import dataclass
-from datetime import timedelta
 from enum import StrEnum
-import logging
 from typing import TYPE_CHECKING
 
 from homeassistant.components.sensor import (
