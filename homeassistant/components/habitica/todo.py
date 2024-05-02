@@ -116,6 +116,33 @@ class BaseHabiticaListEntity(TodoListEntity):
         await self.coordinator.update(no_throttle=True)
         self.async_schedule_update_ha_state()
 
+    async def async_move_todo_item(
+        self, uid: str, previous_uid: str | None = None
+    ) -> None:
+        """Move an item in the To-do list."""
+        if TYPE_CHECKING:
+            assert self.todo_items
+
+        if previous_uid:
+            pos = (
+                self.todo_items.index(
+                    next(item for item in self.todo_items if item.uid == previous_uid)
+                )
+                + 1
+            )
+        else:
+            pos = 0
+
+        try:
+            await self.coordinator.api.tasks[uid].move.to[str(pos)].post()
+
+        except ClientResponseError as e:
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="todo_move_item_failed",
+                translation_placeholders={"pos": str(pos)},
+            ) from e
+
 
 class HabiticaTodosListEntity(BaseHabiticaListEntity):
     """List of Habitica todos."""
@@ -124,6 +151,7 @@ class HabiticaTodosListEntity(BaseHabiticaListEntity):
         TodoListEntityFeature.CREATE_TODO_ITEM
         | TodoListEntityFeature.DELETE_TODO_ITEM
         | TodoListEntityFeature.UPDATE_TODO_ITEM
+        | TodoListEntityFeature.MOVE_TODO_ITEM
         | TodoListEntityFeature.SET_DUE_DATE_ON_ITEM
         | TodoListEntityFeature.SET_DESCRIPTION_ON_ITEM
     )
@@ -233,8 +261,8 @@ class HabiticaDailiesListEntity(BaseHabiticaListEntity):
         TodoListEntityFeature.CREATE_TODO_ITEM
         | TodoListEntityFeature.UPDATE_TODO_ITEM
         | TodoListEntityFeature.DELETE_TODO_ITEM
-        | TodoListEntityFeature.SET_DESCRIPTION_ON_ITEM
         | TodoListEntityFeature.MOVE_TODO_ITEM
+        | TodoListEntityFeature.SET_DESCRIPTION_ON_ITEM
     )
 
     def __init__(self, coordinator: HabitipyData, entry: ConfigEntry) -> None:
