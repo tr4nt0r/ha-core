@@ -59,6 +59,7 @@ async def async_setup_entry(
         [
             HabiticaTodosListEntity(coordinator, config_entry),
             HabiticaDailiesListEntity(coordinator, config_entry),
+            HabiticaHabitsListEntity(coordinator, config_entry),
         ],
         True,
     )
@@ -328,3 +329,48 @@ class HabiticaDailiesListEntity(BaseHabiticaListEntity):
                 if task["type"] == HabiticaTaskType.DAILY
             )
         ]
+
+
+class HabiticaHabitsListEntity(BaseHabiticaListEntity):
+    """List of Habitica habits."""
+
+    _attr_supported_features = (
+        TodoListEntityFeature.UPDATE_TODO_ITEM
+        | TodoListEntityFeature.SET_DESCRIPTION_ON_ITEM
+    )
+
+    def __init__(
+        self, coordinator: HabiticaDataUpdateCoordinator, entry: ConfigEntry
+    ) -> None:
+        """Initialize HabiticaHabitsListEntity."""
+        super().__init__(coordinator, HabiticaTodoList.HABITS, entry)
+
+    @property
+    def todo_items(self) -> list[TodoItem]:
+        """Return the todo items."""
+
+        habits = []
+        for task in (
+            task
+            for task in self.coordinator.data.tasks
+            if task["type"] == HabiticaTaskType.HABIT
+        ):
+            if task["up"]:
+                habits.append(
+                    TodoItem(
+                        uid=f"{task["id"]}_up",
+                        summary=f"➕{task["text"]}",
+                        description=task["notes"] + f"\n\n⏩ +{task["counterUp"]}",
+                        status=TodoItemStatus.NEEDS_ACTION,
+                    )
+                )
+            if task["down"]:
+                habits.append(
+                    TodoItem(
+                        uid=f"{task["id"]}_down",
+                        summary=f"➖{task["text"]}",
+                        description=task["notes"] + f"\n\n⏩ -{task["counterDown"]}",
+                        status=TodoItemStatus.NEEDS_ACTION,
+                    )
+                )
+        return habits
