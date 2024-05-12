@@ -355,21 +355,26 @@ class HabiticaHabitsListEntity(BaseHabiticaListEntity):
             for task in self.coordinator.data.tasks
             if task["type"] == HabiticaTaskType.HABIT
         ):
+            streak = (
+                f"\n\n⏩ +{task["counterUp"]} | -{task["counterDown"]}"
+                if task["up"] and task["down"]
+                else f"\n\n⏩ {task["counterUp"] or task["counterDown"]}"
+            )
             if task["up"]:
                 habits.append(
                     TodoItem(
-                        uid=f"{task["id"]}_up",
-                        summary=f"➕{task["text"]}",
-                        description=task["notes"] + f"\n\n⏩ +{task["counterUp"]}",
+                        uid=task["id"],
+                        summary=f"➕{task["text"]}" + streak,
+                        description=task["notes"],
                         status=TodoItemStatus.NEEDS_ACTION,
                     )
                 )
             if task["down"]:
                 habits.append(
                     TodoItem(
-                        uid=f"{task["id"]}_down",
-                        summary=f"➖{task["text"]}",
-                        description=task["notes"] + f"\n\n⏩ -{task["counterDown"]}",
+                        uid=task["id"],
+                        summary=f"➖{task["text"]}" + streak,
+                        description=task["notes"],
                         status=TodoItemStatus.NEEDS_ACTION,
                     )
                 )
