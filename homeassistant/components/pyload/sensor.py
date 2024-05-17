@@ -19,6 +19,7 @@ from homeassistant.components.sensor import (
     SensorEntity,
     SensorEntityDescription,
 )
+from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
 from homeassistant.const import (
     CONF_HOST,
     CONF_MONITORED_VARIABLES,
@@ -36,7 +37,7 @@ import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType, StateType
 
-from .const import DEFAULT_HOST, DEFAULT_NAME, DEFAULT_PORT
+from .const import DEFAULT_HOST, DEFAULT_NAME, DEFAULT_PORT, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -78,16 +79,29 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
 async def async_setup_platform(
     hass: HomeAssistant,
     config: ConfigType,
-    async_add_entities: AddEntitiesCallback,
+    add_entities: AddEntitiesCallback,
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
-    """Set up the pyLoad sensors."""
-    host = config[CONF_HOST]
-    port = config[CONF_PORT]
-    protocol = "https" if config[CONF_SSL] else "http"
-    name = config[CONF_NAME]
-    username = config.get(CONF_USERNAME)
-    password = config.get(CONF_PASSWORD)
+    """Import config from yaml."""
+
+    await hass.config_entries.flow.async_init(
+        DOMAIN, context={"source": SOURCE_IMPORT}, data=config
+    )
+
+
+async def async_setup_entry(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+) -> None:
+    """Set up sensors from a config entry."""
+
+    host = entry.data[CONF_HOST]
+    port = entry.data[CONF_PORT]
+    protocol = "https" if entry.data[CONF_SSL] else "http"
+    name = entry.data[CONF_NAME]
+    username = entry.data[CONF_USERNAME]
+    password = entry.data[CONF_PASSWORD]
     url = f"{protocol}://{host}:{port}/"
 
     session = async_create_clientsession(
@@ -106,13 +120,16 @@ async def async_setup_platform(
         raise PlatformNotReady("Unable to parse data from pyLoad API") from e
     except InvalidAuth as e:
         raise PlatformNotReady(
-            f"Authentication failed for {config[CONF_USERNAME]}, check your login credentials"
+            f"Authentication failed for {entry.data[CONF_USERNAME]}, check your login credentials"
         ) from e
 
     async_add_entities(
         (
             PyLoadSensor(
-                api=pyloadapi, entity_description=description, client_name=name
+                api=pyloadapi,
+                entity_description=description,
+                client_name=name,
+                entry_id=entry.entry_id,
             )
             for description in SENSOR_DESCRIPTIONS
         ),
@@ -124,10 +141,15 @@ class PyLoadSensor(SensorEntity):
     """Representation of a pyLoad sensor."""
 
     def __init__(
-        self, api: PyLoadAPI, entity_description: SensorEntityDescription, client_name
+        self,
+        api: PyLoadAPI,
+        entity_description: SensorEntityDescription,
+        client_name,
+        entry_id: str,
     ) -> None:
         """Initialize a new pyLoad sensor."""
         self._attr_name = f"{client_name} {entity_description.name}"
+        self._attr_unique_id = entry_id
         self.type = entity_description.key
         self.api = api
         self.entity_description = entity_description
