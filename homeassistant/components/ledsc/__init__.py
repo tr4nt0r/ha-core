@@ -6,7 +6,7 @@ import logging
 
 import voluptuous as vol
 
-from homeassistant.components.light import PLATFORM_SCHEMA
+
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PORT, Platform
 from homeassistant.core import HomeAssistant
@@ -15,13 +15,13 @@ import homeassistant.helpers.config_validation as cv
 PLATFORMS: list[str] = [Platform.LIGHT]
 _LOGGER = logging.getLogger(__name__)
 
-# Validation of the user's configuration
-PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
-    {
-        vol.Required(CONF_HOST): cv.string,
-        vol.Required(CONF_PORT): cv.port,
-    }
-)
+# # Validation of the user's configuration
+# PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
+#     {
+#         vol.Required(CONF_HOST): cv.string,
+#         vol.Required(CONF_PORT): cv.port,
+#     }
+# )
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

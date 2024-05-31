@@ -5,11 +5,14 @@ from typing import Any
 
 from websc_client import WebSCAsync, WebSClientAsync as WebSClient
 
+from homeassistant.components.light import ColorMode, LightEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PORT
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.components.light import ColorMode, LightEntity
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+
+from .consts import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -28,7 +31,7 @@ async def async_setup_entry(
     devices: list[LedSCLightEntity] = []
     for websc in client.devices.values():
         ledsc = LedSCLightEntity(
-            client_id=f"{config.data[CONF_HOST]}:{config.data[CONF_PORT]}",
+            client_id=config.entry_id,
             websc=websc,
             hass=hass,
         )
@@ -40,6 +43,9 @@ async def async_setup_entry(
 class LedSCLightEntity(LightEntity):
     """Representation of an LedSC Light."""
 
+    _attr_has_entity_name = True
+    _attr_translation_key: str = "light"
+
     def __init__(
         self,
         client_id: str,
@@ -50,7 +56,13 @@ class LedSCLightEntity(LightEntity):
         self._hass: HomeAssistant = hass
         self._websc: WebSCAsync = websc
         self._attr_unique_id = f"{client_id}-{websc.name}"
-        _LOGGER.debug(f"LedSC '%s' initialized!", self.name)
+        _LOGGER.debug("LedSC %s initialized!", websc.name)
+        self._attr_device_info = DeviceInfo(
+            manufacturer="LedSC",
+            model="LedSC",
+            name=websc.name,
+            identifiers={(DOMAIN, f"{client_id}-{websc.name}")},
+        )
 
     @property
     def supported_color_modes(self) -> set[ColorMode] | set[str] | None:
@@ -66,11 +78,6 @@ class LedSCLightEntity(LightEntity):
     def available(self) -> bool:
         """Check if light is available."""
         return not self._websc.is_lost
-
-    @property
-    def name(self) -> str:
-        """Return the display name of this light."""
-        return self._websc.name
 
     @property
     def brightness(self) -> int | None:
@@ -145,6 +152,7 @@ class LedSCLightEntity(LightEntity):
 
 def __generate_callback(ledsc: LedSCLightEntity):
     """Generates a callback to respond to a LedSC state change."""
+
     async def on_device_change(data: dict[str, int]):
         await ledsc.async_update_ha_state(force_refresh=True)
 
