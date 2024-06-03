@@ -12,6 +12,7 @@ import pytest
 from requests.exceptions import RequestException
 from syrupy.assertion import SnapshotAssertion
 
+from homeassistant.components.recorder import Recorder
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
@@ -20,12 +21,16 @@ from tests.common import MockConfigEntry
 
 
 async def test_entry_setup_unload(
-    hass: HomeAssistant, ista_config_entry: MockConfigEntry, mock_ista: MagicMock
+    recorder_mock: Recorder,
+    hass: HomeAssistant,
+    ista_config_entry: MockConfigEntry,
+    mock_ista: MagicMock,
 ) -> None:
     """Test integration setup and unload."""
 
     ista_config_entry.add_to_hass(hass)
     await hass.config_entries.async_setup(ista_config_entry.entry_id)
+
     await hass.async_block_till_done()
 
     assert ista_config_entry.state is ConfigEntryState.LOADED
@@ -46,6 +51,7 @@ async def test_entry_setup_unload(
     ],
 )
 async def test_config_entry_not_ready(
+    recorder_mock: Recorder,
     hass: HomeAssistant,
     ista_config_entry: MockConfigEntry,
     mock_ista: MagicMock,
@@ -65,6 +71,7 @@ async def test_config_entry_not_ready(
     [LoginError(None), KeycloakError],
 )
 async def test_config_entry_error(
+    recorder_mock: Recorder,
     hass: HomeAssistant,
     ista_config_entry: MockConfigEntry,
     mock_ista: MagicMock,
@@ -80,6 +87,7 @@ async def test_config_entry_error(
 
 
 async def test_device_registry(
+    recorder_mock: Recorder,
     hass: HomeAssistant,
     ista_config_entry: MockConfigEntry,
     mock_ista: MagicMock,

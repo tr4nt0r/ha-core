@@ -232,8 +232,7 @@ class IstaSensor(CoordinatorEntity[IstaCoordinator], SensorEntity):
                 last_stats[statistic_id][0].get("end") or 0, tz=datetime.UTC
             ) + datetime.timedelta(days=1)
 
-        if monthly_consumptions := await self.hass.async_add_executor_job(
-            get_statistics,
+        if monthly_consumptions := get_statistics(
             self.coordinator.data[self.consumption_unit],
             self.entity_description.consumption_type,
             self.entity_description.value_type,
