@@ -97,5 +97,16 @@
         "name": "Estimated Power"
       }
     }
+  },
+  "exceptions": {
+    "write_settings_to_flash_failed": {
+      "message": "Failed to save settings to flash"
+    },
+    "setup_device_unavailable_exception": {
+      "message": "Device {name} is not reachable"
+    },
+    "setup_device_connection_error_exception": {
+      "message": "Connection to device {name} failed, try again later"
+    }
   }
 }

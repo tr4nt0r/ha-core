@@ -6,7 +6,7 @@ from pynecil import CommunicationError, Pynecil
 
 from homeassistant.components import bluetooth
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_ADDRESS, Platform
+from homeassistant.const import CONF_ADDRESS, CONF_NAME, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.device_registry import CONNECTION_BLUETOOTH, DeviceInfo
@@ -29,7 +29,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: PinecilConfigEntry) -> b
         raise ConfigEntryNotReady(
             translation_domain=DOMAIN,
             translation_key="setup_device_unavailable_exception",
-            translation_placeholders={CONF_ADDRESS: entry.data[CONF_ADDRESS]},
+            translation_placeholders={CONF_NAME: entry.title},
         )
 
     pinecil = Pynecil(ble_device)
@@ -39,8 +39,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: PinecilConfigEntry) -> b
         await pinecil.disconnect()
         raise ConfigEntryNotReady(
             translation_domain=DOMAIN,
-            translation_key="setup_device_unavailable_exception",
-            translation_placeholders={CONF_ADDRESS: entry.data[CONF_ADDRESS]},
+            translation_key="setup_device_connection_error_exception",
+            translation_placeholders={CONF_NAME: entry.title},
         ) from e
 
     device_info = DeviceInfo(
