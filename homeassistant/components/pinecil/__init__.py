@@ -2,18 +2,17 @@
 
 from __future__ import annotations
 
-import logging
+from pynecil import CommunicationError, Pynecil
 
-from bleak import BleakClient
-from pinecil import BLE, Pinecil
-
+from homeassistant.components import bluetooth
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_ADDRESS, Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.helpers.device_registry import CONNECTION_BLUETOOTH, DeviceInfo
 
+from .const import DOMAIN, MANUFACTURER, MODEL
 from .coordinator import PinecilCoordinator
-
-_LOGGER = logging.getLogger(__name__)
 
 PLATFORMS: list[Platform] = [Platform.NUMBER, Platform.SENSOR]
 
@@ -23,24 +22,38 @@ type PinecilConfigEntry = ConfigEntry[PinecilCoordinator]
 async def async_setup_entry(hass: HomeAssistant, entry: PinecilConfigEntry) -> bool:
     """Set up Pinecil from a config entry."""
 
-    #
-    class _BLE(BLE):
-        """BLE device wrapper."""
+    ble_device = bluetooth.async_ble_device_from_address(
+        hass, entry.data[CONF_ADDRESS], connectable=True
+    )
+    if not ble_device:
+        raise ConfigEntryNotReady(
+            translation_domain=DOMAIN,
+            translation_key="setup_device_unavailable_exception",
+            translation_placeholders={CONF_ADDRESS: entry.data[CONF_ADDRESS]},
+        )
 
-        def __init__(self, address: str) -> None:  # pylint: disable=W0231
-            """BLE device wrapper."""
-            self.__address = address
-            self.__client = BleakClient(  # pylint: disable=W0238
-                self.__address, disconnected_callback=self.__on_disconnected
-            )
+    pinecil = Pynecil(ble_device)
+    try:
+        device = await pinecil.get_device_info()
+    except CommunicationError as e:
+        await pinecil.disconnect()
+        raise ConfigEntryNotReady(
+            translation_domain=DOMAIN,
+            translation_key="setup_device_unavailable_exception",
+            translation_placeholders={CONF_ADDRESS: entry.data[CONF_ADDRESS]},
+        ) from e
 
-        def __on_disconnected(self, client: BleakClient) -> None:  # pylint: disable=W0238
-            """Device disconnect callback."""
-            _LOGGER.debug("Disconnected from Pinecil device %s", self.__address)
+    device_info = DeviceInfo(
+        identifiers={(DOMAIN, entry.data[CONF_ADDRESS])},
+        connections={(CONNECTION_BLUETOOTH, entry.data[CONF_ADDRESS])},
+        manufacturer=MANUFACTURER,
+        model=MODEL,
+        name="Pinecil",
+        sw_version=device.build,
+        serial_number=device.device_sn,
+    )
 
-    pinecil = Pinecil(_BLE(entry.data[CONF_ADDRESS]))
-
-    coordinator = PinecilCoordinator(hass, pinecil)
+    coordinator = PinecilCoordinator(hass, pinecil, device_info)
     await coordinator.async_config_entry_first_refresh()
 
     entry.runtime_data = coordinator

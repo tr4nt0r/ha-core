@@ -7,10 +7,11 @@ DOMAIN = "pinecil"
 MANUFACTURER = "Pine64"
 MODEL = "Pinecil V2"
 
-UPDATE_SECONDS = 1
-DEVICE_TIMEOUT = 5
-
 OHM = "Ω"
+
+MAX_TEMP: int = 450
+MIN_TEMP: int = 10
+MIN_BOOST_TEMP: int = 250
 
 
 class PinecilEntity(StrEnum):
@@ -37,7 +38,3 @@ class PinecilEntity(StrEnum):
     BOOST_TEMP = "boost_temp"
     SHUTDOWN_TIMEOUT = "shutdown_timeout"
     DISPLAY_BRIGHTNESS = "display_brightness"
-
-
-POWER_SOURCES = ["dc", "qc", "pd vbus", "pd"]
-OPERATING_MODES = ["idle", "soldering", "boost", "sleeping", "settings", "debug"]

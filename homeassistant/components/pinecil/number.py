@@ -4,9 +4,8 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any
 
-from pinecil.pinecil_setting_limits import MAX_TEMP_C, MIN_BOOST_TEMP_C, MIN_TEMP_C
+from pynecil import CharSetting, LiveDataResponse, SettingsDataResponse
 
 from homeassistant.components.number import (
     NumberDeviceClass,
@@ -21,12 +20,11 @@ from homeassistant.const import (
     UnitOfTime,
 )
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import CONNECTION_BLUETOOTH, DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import PinecilConfigEntry
-from .const import DOMAIN, MANUFACTURER, MODEL, PinecilEntity
+from .const import MAX_TEMP, MIN_TEMP, PinecilEntity
 from .coordinator import PinecilCoordinator
 
 
@@ -34,10 +32,9 @@ from .coordinator import PinecilCoordinator
 class PinecilNumberEntityDescription(NumberEntityDescription):
     """Describes Pinecil sensor entity."""
 
-    value_fn: Callable[[dict, dict], float | int | None]
-    set_fn: Callable[[int | float], float | int] | None = None
-    max_value_fn: Callable[[Any], float]
-    set_key: str
+    value_fn: Callable[[LiveDataResponse, SettingsDataResponse], float | int | None]
+    max_value_fn: Callable[[LiveDataResponse], float | int]
+    set_key: CharSetting
 
 
 SENSOR_DESCRIPTIONS: tuple[PinecilNumberEntityDescription, ...] = (
@@ -46,26 +43,24 @@ SENSOR_DESCRIPTIONS: tuple[PinecilNumberEntityDescription, ...] = (
         translation_key=PinecilEntity.SETPOINT_TEMP,
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
         device_class=NumberDeviceClass.TEMPERATURE,
-        value_fn=lambda data, settings: data.get("SetTemp"),
-        set_key="SetTemperature",
+        value_fn=lambda data, _: data.set_temp,
+        set_key=CharSetting.SETPOINT_TEMP,
         mode=NumberMode.BOX,
-        native_min_value=MIN_TEMP_C,
+        native_min_value=MIN_TEMP,
         native_step=5,
-        max_value_fn=lambda data: min(
-            data.get("MaxTipTempAbility", MAX_TEMP_C), MAX_TEMP_C
-        ),
+        max_value_fn=lambda data: min(data.max_temp or MAX_TEMP, MAX_TEMP),
     ),
     PinecilNumberEntityDescription(
         key=PinecilEntity.SLEEP_TEMP,
         translation_key=PinecilEntity.SLEEP_TEMP,
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
         device_class=NumberDeviceClass.TEMPERATURE,
-        value_fn=lambda data, settings: settings.get("SleepTemperature"),
-        set_key="SleepTemperature",
+        value_fn=lambda _, settings: settings.get("sleep_temp"),
+        set_key=CharSetting.SLEEP_TEMP,
         mode=NumberMode.BOX,
-        native_min_value=MIN_TEMP_C,
+        native_min_value=MIN_TEMP,
         native_step=10,
-        max_value_fn=lambda data: MAX_TEMP_C,
+        max_value_fn=lambda _: MAX_TEMP,
         entity_category=EntityCategory.CONFIG,
     ),
     PinecilNumberEntityDescription(
@@ -73,12 +68,12 @@ SENSOR_DESCRIPTIONS: tuple[PinecilNumberEntityDescription, ...] = (
         translation_key=PinecilEntity.BOOST_TEMP,
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
         device_class=NumberDeviceClass.TEMPERATURE,
-        value_fn=lambda data, settings: settings.get("BoostTemperature"),
-        set_key="BoostTemperature",
+        value_fn=lambda _, settings: settings.get("boost_temp"),
+        set_key=CharSetting.BOOST_TEMP,
         mode=NumberMode.BOX,
-        native_min_value=MIN_BOOST_TEMP_C,
+        native_min_value=0,
         native_step=10,
-        max_value_fn=lambda data: MAX_TEMP_C,
+        max_value_fn=lambda _: MAX_TEMP,
         entity_category=EntityCategory.CONFIG,
     ),
     PinecilNumberEntityDescription(
@@ -86,53 +81,54 @@ SENSOR_DESCRIPTIONS: tuple[PinecilNumberEntityDescription, ...] = (
         translation_key=PinecilEntity.QC_MAX_VOLTAGE,
         native_unit_of_measurement=UnitOfElectricPotential.VOLT,
         device_class=NumberDeviceClass.VOLTAGE,
-        value_fn=lambda data, settings: float(settings.get("QCMaxVoltage", 9.0) / 10),
-        set_fn=lambda value: value * 10,
-        set_key="QCMaxVoltage",
+        value_fn=lambda _, settings: settings.get("qc_ideal_voltage"),
+        set_key=CharSetting.QC_IDEAL_VOLTAGE,
         mode=NumberMode.BOX,
         native_min_value=9.0,
         native_step=0.1,
         max_value_fn=lambda _: 22.0,
         entity_category=EntityCategory.CONFIG,
+        entity_registry_enabled_default=False,
     ),
     PinecilNumberEntityDescription(
         key=PinecilEntity.PD_TIMEOUT,
         translation_key=PinecilEntity.PD_TIMEOUT,
         native_unit_of_measurement=UnitOfTime.SECONDS,
         device_class=NumberDeviceClass.DURATION,
-        value_fn=lambda data, settings: settings.get("PDNegTimeout", 0) / 10,
-        set_key="PDNegTimeout",
-        set_fn=lambda value: value * 10,
+        value_fn=lambda _, settings: settings.get("pd_negotiation_timeout"),
+        set_key=CharSetting.PD_NEGOTIATION_TIMEOUT,
         mode=NumberMode.BOX,
         native_min_value=0,
         native_step=1,
         max_value_fn=lambda _: 5.0,
         entity_category=EntityCategory.CONFIG,
+        entity_registry_enabled_default=False,
     ),
     PinecilNumberEntityDescription(
         key=PinecilEntity.SHUTDOWN_TIMEOUT,
         translation_key=PinecilEntity.SHUTDOWN_TIMEOUT,
         native_unit_of_measurement=UnitOfTime.MINUTES,
         device_class=NumberDeviceClass.DURATION,
-        value_fn=lambda data, settings: settings.get("ShutdownTimeout", 0),
-        set_key="ShutdownTimeout",
+        value_fn=lambda _, settings: settings.get("shutdown_time"),
+        set_key=CharSetting.SHUTDOWN_TIME,
         mode=NumberMode.BOX,
         native_min_value=0,
         native_step=1,
         max_value_fn=lambda _: 60,
         entity_category=EntityCategory.CONFIG,
+        entity_registry_enabled_default=False,
     ),
     PinecilNumberEntityDescription(
         key=PinecilEntity.DISPLAY_BRIGHTNESS,
         translation_key=PinecilEntity.DISPLAY_BRIGHTNESS,
-        value_fn=lambda data, settings: int(settings.get("Brightness", 10) / 25 + 1),
-        set_fn=lambda value: (value - 1) * 25,
-        set_key="Brightness",
+        value_fn=lambda _, settings: settings.get("display_brightness"),
+        set_key=CharSetting.DISPLAY_BRIGHTNESS,
         mode=NumberMode.SLIDER,
         native_min_value=1,
         native_step=1,
         max_value_fn=lambda _: 5,
         entity_category=EntityCategory.CONFIG,
+        entity_registry_visible_default=False,
     ),
 )
 
@@ -164,27 +160,16 @@ class PinecilNumber(CoordinatorEntity[PinecilCoordinator], NumberEntity):
         entry: PinecilConfigEntry,
     ) -> None:
         """Initialize the sensor."""
-        super().__init__(coordinator)
-        assert entry.unique_id
+        super().__init__(coordinator, context=entity_description.set_key)
         self.entity_description = entity_description
         self._attr_unique_id = f"{entry.unique_id}_{entity_description.key}"
-        self.device_info = DeviceInfo(
-            identifiers={(DOMAIN, entry.unique_id)},
-            connections={(CONNECTION_BLUETOOTH, entry.unique_id)},
-            manufacturer=MANUFACTURER,
-            model=MODEL,
-            name="Pinecil",
-            sw_version=coordinator.device.get("build"),
-        )
+        self.device_info = self.coordinator.device_info
 
     async def async_set_native_value(self, value: float) -> None:
         """Update the current value."""
-
-        if self.entity_description.set_fn:
-            value = self.entity_description.set_fn(value)
-        await self.coordinator.pinecil.set_one_setting(
-            self.entity_description.set_key, int(value)
-        )
+        await self.coordinator.pinecil.write(self.entity_description.set_key, value)
+        await self.coordinator.save_settings()
+        await self.coordinator.update_settings(no_throttle=True)
 
     @property
     def native_value(self) -> float | int | None:

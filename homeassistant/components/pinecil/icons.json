@@ -11,13 +11,19 @@
         "default": "mdi:timer-sync"
       },
       "boost_temp": {
-        "default": "mdi:rocket-launch"
+        "default": "mdi:rocket-launch",
+        "state": {
+          "0": "mdi:thermometer-off"
+        }
       },
       "shutdown_timeout": {
         "default": "mdi:timer-stop"
       },
       "display_brightness": {
         "default": "mdi:brightness-6"
+      },
+      "qc_max_voltage": {
+        "default": "mdi:sine-wave"
       }
     },
     "sensor": {

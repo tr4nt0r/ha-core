@@ -61,7 +61,7 @@
         "state": {
           "dc": "DC Input",
           "qc": "USB Quick Charge",
-          "pd_vbus": "USB Power Delivery VBUS",
+          "pd_vbus": "USB PD VBUS",
           "pd": "USB Power Delivery"
         }
       },
