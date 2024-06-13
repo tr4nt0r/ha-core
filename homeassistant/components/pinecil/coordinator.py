@@ -18,7 +18,6 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.util import Throttle
 
 from .const import DOMAIN
 
@@ -60,7 +59,6 @@ class PinecilCoordinator(DataUpdateCoordinator[LiveDataResponse]):
             await self.pinecil.disconnect()
             raise UpdateFailed("Cannot connect to device") from e
 
-    @Throttle(MIN_TIME_BETWEEN_SETTINGS_UPDATES)
     async def update_settings(self) -> None:
         """Fetch settings from Pinecil."""
 

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+
 from pynecil import CommunicationError, Pynecil
 
 from homeassistant.components import bluetooth
@@ -17,6 +19,8 @@ from .coordinator import PinecilCoordinator
 PLATFORMS: list[Platform] = [Platform.NUMBER, Platform.SENSOR]
 
 type PinecilConfigEntry = ConfigEntry[PinecilCoordinator]
+
+_LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: PinecilConfigEntry) -> bool:
@@ -36,6 +40,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: PinecilConfigEntry) -> b
     try:
         device = await pinecil.get_device_info()
     except CommunicationError as e:
+        _LOGGER.exception("Cannot connect to device: ", exc_info=e)
         await pinecil.disconnect()
         raise ConfigEntryNotReady(
             translation_domain=DOMAIN,
