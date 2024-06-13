@@ -18,7 +18,7 @@ from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers.debounce import Debouncer
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .const import DOMAIN
+from .const import ADDITIONAL_USER_FIELDS, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
