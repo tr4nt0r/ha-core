@@ -146,6 +146,12 @@ class BaseHabiticaListEntity(HabiticaBase, TodoListEntity):
         if TYPE_CHECKING:
             assert item.uid
             assert current_item
+            assert item.due
+
+        if self.idx is HabiticaTodoList.TODOS:  # Only todos support a due date.
+            date = item.due.isoformat()
+        else:
+            date = None
 
         if (
             self.entity_description.key is HabiticaTodoList.TODOS
@@ -254,7 +260,7 @@ class HabiticaTodosListEntity(BaseHabiticaListEntity):
                     ),
                 )
                 for task in self.coordinator.data.tasks
-                if task["type"] == HabiticaTaskType.TODO
+                if task["type"] is HabiticaTaskType.TODO
             ),
         ]
 
