@@ -27,7 +27,7 @@ from homeassistant.helpers.selector import (
 )
 
 from . import IstaConfigEntry
-from .const import CONF_CODE, CONF_OTP, DOMAIN
+from .const import CONF_OTP, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -43,12 +43,6 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
             TextSelectorConfig(
                 type=TextSelectorType.PASSWORD,
                 autocomplete="current-password",
-            )
-        ),
-        vol.Optional(CONF_CODE): TextSelector(
-            TextSelectorConfig(
-                type=TextSelectorType.TEXT,
-                autocomplete="one-time-code",
             )
         ),
     }
@@ -77,9 +71,9 @@ class IstaConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
         if user_input is not None:
             ista = PyEcotrendIsta(
-                email=user_input[CONF_EMAIL],
-                password=user_input[CONF_PASSWORD],
-                totp=user_input[CONF_CODE],
+                user_input[CONF_EMAIL],
+                user_input[CONF_PASSWORD],
+                _LOGGER,
             )
             try:
                 await self.hass.async_add_executor_job(ista.login)
@@ -128,9 +122,9 @@ class IstaConfigFlow(ConfigFlow, domain=DOMAIN):
 
         if user_input is not None:
             ista = PyEcotrendIsta(
-                email=user_input[CONF_EMAIL],
-                password=user_input[CONF_PASSWORD],
-                totp=user_input[CONF_CODE],
+                user_input[CONF_EMAIL],
+                user_input[CONF_PASSWORD],
+                _LOGGER,
             )
             try:
                 await self.hass.async_add_executor_job(ista.login)

@@ -11,7 +11,7 @@ from homeassistant.const import CONF_EMAIL, CONF_PASSWORD, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 
-from .const import CONF_CODE, CONF_OTP, DOMAIN
+from .const import CONF_OTP, DOMAIN
 from .coordinator import IstaCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -24,12 +24,7 @@ type IstaConfigEntry = ConfigEntry[IstaCoordinator]
 async def async_setup_entry(hass: HomeAssistant, entry: IstaConfigEntry) -> bool:
     """Set up ista EcoTrend from a config entry."""
     totp: str | None = None
-    if totp := entry.data.get(CONF_CODE):
-        hass.config_entries.async_update_entry(
-            entry,
-            data={**entry.data, CONF_CODE: ""},
-        )
-    elif otp_entity := entry.options.get(CONF_OTP):
+    if otp_entity := entry.options.get(CONF_OTP):
         if state := hass.states.get(otp_entity):
             totp = state.state
 

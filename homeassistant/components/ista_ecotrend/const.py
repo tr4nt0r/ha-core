@@ -2,4 +2,3 @@
 
 DOMAIN = "ista_ecotrend"
 CONF_OTP = "otp"
-CONF_CODE = "code"
