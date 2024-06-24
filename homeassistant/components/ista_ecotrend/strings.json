@@ -13,7 +13,11 @@
       "user": {
         "data": {
           "email": "[%key:common::config_flow::data::email%]",
-          "password": "[%key:common::config_flow::data::password%]"
+          "password": "[%key:common::config_flow::data::password%]",
+          "code": "Two-factor authentication code (optional)"
+        },
+        "data_description": {
+          "code": "Enter a code from your authenticator app if you have enabled\ntwo-factor authentication for your ista EcoTrend account"
         }
       },
       "reauth_confirm": {
@@ -21,7 +25,11 @@
         "description": "Please reenter the password for: {email}",
         "data": {
           "email": "[%key:common::config_flow::data::email%]",
-          "password": "[%key:common::config_flow::data::password%]"
+          "password": "[%key:common::config_flow::data::password%]",
+          "code": "Two-factor authentication code (optional)"
+        },
+        "data_description": {
+          "code": "Enter a code from your authenticator app if you have enabled\ntwo-factor authentication for your ista EcoTrend account"
         }
       }
     }
@@ -60,6 +68,17 @@
     },
     "connection_exception": {
       "message": "Unable to connect and retrieve data from ista EcoTrend, try again later"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Two-factor authentication",
+        "description": "Select the sensor that provides OTP codes to authenticate with ista EcoTrend or go to the [**One-Time Password (OTP) integration**]({url}) to configure it",
+        "data": {
+          "otp": "One-Time Password (OTP)"
+        }
+      }
     }
   }
 }
