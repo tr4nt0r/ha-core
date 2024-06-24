@@ -9,25 +9,16 @@ from typing import TYPE_CHECKING, Any
 from pyecotrend_ista import KeycloakError, LoginError, PyEcotrendIsta, ServerError
 import voluptuous as vol
 
-from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN
-from homeassistant.config_entries import (
-    ConfigEntry,
-    ConfigFlow,
-    ConfigFlowResult,
-    OptionsFlow,
-)
+from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 from homeassistant.const import CONF_EMAIL, CONF_NAME, CONF_PASSWORD
-from homeassistant.core import callback
 from homeassistant.helpers.selector import (
-    EntitySelector,
-    EntitySelectorConfig,
     TextSelector,
     TextSelectorConfig,
     TextSelectorType,
 )
 
 from . import IstaConfigEntry
-from .const import CONF_CODE, CONF_OTP, DOMAIN
+from .const import CONF_CODE, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -53,16 +44,6 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
         ),
     }
 )
-
-OPTIONS_DATA_SCHEMA = vol.Schema(
-    {
-        vol.Required(CONF_OTP): EntitySelector(
-            EntitySelectorConfig(domain=SENSOR_DOMAIN, integration="otp"),
-        )
-    }
-)
-
-OPTIONS_PLACEHOLDER = {"url": "/config/integrations/dashboard/add?domain=otp"}
 
 
 class IstaConfigFlow(ConfigFlow, domain=DOMAIN):
@@ -161,33 +142,4 @@ class IstaConfigFlow(ConfigFlow, domain=DOMAIN):
                 CONF_EMAIL: self.reauth_entry.data[CONF_EMAIL],
             },
             errors=errors,
-        )
-
-    @staticmethod
-    @callback
-    def async_get_options_flow(config_entry: ConfigEntry) -> OptionsFlow:
-        """Create the options flow."""
-        return OptionsFlowHandler(config_entry)
-
-
-class OptionsFlowHandler(OptionsFlow):
-    """Handle an option flow for ista EcoTrend."""
-
-    def __init__(self, config_entry: ConfigEntry) -> None:
-        """Initialize options flow."""
-        self.config_entry = config_entry
-
-    async def async_step_init(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
-        """Manage the options."""
-        if user_input is not None:
-            return self.async_create_entry(title="", data=user_input)
-
-        return self.async_show_form(
-            step_id="init",
-            data_schema=self.add_suggested_values_to_schema(
-                OPTIONS_DATA_SCHEMA, self.config_entry.options
-            ),
-            description_placeholders=OPTIONS_PLACEHOLDER,
         )

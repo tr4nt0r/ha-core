@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from typing_extensions import Generator
 
-from homeassistant.components.ista_ecotrend.const import DOMAIN
+from homeassistant.components.ista_ecotrend.const import CONF_CODE, DOMAIN
 from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
 
 from tests.common import MockConfigEntry
@@ -20,6 +20,7 @@ def mock_ista_config_entry() -> MockConfigEntry:
         data={
             CONF_EMAIL: "test@example.com",
             CONF_PASSWORD: "test-password",
+            CONF_CODE: "123456",
         },
         unique_id="26e93f1a-c828-11ea-87d0-0242ac130003",
     )

@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock
 from pyecotrend_ista import LoginError, ServerError
 import pytest
 
-from homeassistant.components.ista_ecotrend.const import DOMAIN
+from homeassistant.components.ista_ecotrend.const import CONF_CODE, DOMAIN
 from homeassistant.config_entries import SOURCE_REAUTH, SOURCE_USER
 from homeassistant.const import CONF_EMAIL, CONF_PASSWORD
 from homeassistant.core import HomeAssistant
@@ -26,6 +26,7 @@ async def test_form(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> None:
         {
             CONF_EMAIL: "test@example.com",
             CONF_PASSWORD: "test-password",
+            CONF_CODE: "123456",
         },
     )
     await hass.async_block_till_done()
@@ -35,6 +36,7 @@ async def test_form(hass: HomeAssistant, mock_setup_entry: AsyncMock) -> None:
     assert result["data"] == {
         CONF_EMAIL: "test@example.com",
         CONF_PASSWORD: "test-password",
+        CONF_CODE: "123456",
     }
     assert len(mock_setup_entry.mock_calls) == 1
 
@@ -64,6 +66,7 @@ async def test_form_invalid_auth(
         {
             CONF_EMAIL: "test@example.com",
             CONF_PASSWORD: "test-password",
+            CONF_CODE: "123456",
         },
     )
 
@@ -76,6 +79,7 @@ async def test_form_invalid_auth(
         {
             CONF_EMAIL: "test@example.com",
             CONF_PASSWORD: "test-password",
+            CONF_CODE: "123456",
         },
     )
     await hass.async_block_till_done()
@@ -85,6 +89,7 @@ async def test_form_invalid_auth(
     assert result["data"] == {
         CONF_EMAIL: "test@example.com",
         CONF_PASSWORD: "test-password",
+        CONF_CODE: "123456",
     }
     assert len(mock_setup_entry.mock_calls) == 1
 
@@ -115,6 +120,7 @@ async def test_reauth(
         {
             CONF_EMAIL: "new@example.com",
             CONF_PASSWORD: "new-password",
+            CONF_CODE: "123456",
         },
     )
 
@@ -125,6 +131,7 @@ async def test_reauth(
     assert ista_config_entry.data == {
         CONF_EMAIL: "new@example.com",
         CONF_PASSWORD: "new-password",
+        CONF_CODE: "",
     }
     assert len(hass.config_entries.async_entries()) == 1
 
@@ -166,6 +173,7 @@ async def test_reauth_error_and_recover(
         {
             CONF_EMAIL: "new@example.com",
             CONF_PASSWORD: "new-password",
+            CONF_CODE: "123456",
         },
     )
 
@@ -178,6 +186,7 @@ async def test_reauth_error_and_recover(
         {
             CONF_EMAIL: "new@example.com",
             CONF_PASSWORD: "new-password",
+            CONF_CODE: "123456",
         },
     )
 
@@ -188,5 +197,6 @@ async def test_reauth_error_and_recover(
     assert ista_config_entry.data == {
         CONF_EMAIL: "new@example.com",
         CONF_PASSWORD: "new-password",
+        CONF_CODE: "",
     }
     assert len(hass.config_entries.async_entries()) == 1
