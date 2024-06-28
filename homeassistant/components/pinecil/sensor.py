@@ -24,11 +24,10 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import StateType
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import PinecilConfigEntry
 from .const import OHM, PinecilEntity
-from .coordinator import PinecilCoordinator
+from .entity import PinecilBaseEntity
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -151,28 +150,15 @@ async def async_setup_entry(
     coordinator = entry.runtime_data
 
     async_add_entities(
-        PinecilSensor(coordinator, description, entry)
-        for description in SENSOR_DESCRIPTIONS
+        PinecilSensor(coordinator, description) for description in SENSOR_DESCRIPTIONS
     )
 
 
-class PinecilSensor(CoordinatorEntity[PinecilCoordinator], SensorEntity):
+class PinecilSensor(PinecilBaseEntity, SensorEntity):
     """Implementation of a Pinecil sensor."""
 
     _attr_has_entity_name = True
     entity_description: PinecilSensorEntityDescription
-
-    def __init__(
-        self,
-        coordinator: PinecilCoordinator,
-        entity_description: PinecilSensorEntityDescription,
-        entry: PinecilConfigEntry,
-    ) -> None:
-        """Initialize the sensor."""
-        super().__init__(coordinator)
-        self.entity_description = entity_description
-        self._attr_unique_id = f"{entry.unique_id}_{entity_description.key}"
-        self.device_info = self.coordinator.device_info
 
     @property
     def native_value(self) -> StateType:

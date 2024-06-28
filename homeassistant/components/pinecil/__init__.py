@@ -11,9 +11,8 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_ADDRESS, CONF_NAME, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
-from homeassistant.helpers.device_registry import CONNECTION_BLUETOOTH, DeviceInfo
 
-from .const import DOMAIN, MANUFACTURER, MODEL
+from .const import DOMAIN
 from .coordinator import PinecilCoordinator
 
 PLATFORMS: list[Platform] = [Platform.NUMBER, Platform.SENSOR]
@@ -38,7 +37,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: PinecilConfigEntry) -> b
 
     pinecil = Pynecil(ble_device)
     try:
-        device = await pinecil.get_device_info()
+        await pinecil.connect()
     except CommunicationError as e:
         _LOGGER.exception("Cannot connect to device: ", exc_info=e)
         await pinecil.disconnect()
@@ -48,17 +47,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: PinecilConfigEntry) -> b
             translation_placeholders={CONF_NAME: entry.title},
         ) from e
 
-    device_info = DeviceInfo(
-        identifiers={(DOMAIN, entry.data[CONF_ADDRESS])},
-        connections={(CONNECTION_BLUETOOTH, entry.data[CONF_ADDRESS])},
-        manufacturer=MANUFACTURER,
-        model=MODEL,
-        name="Pinecil",
-        sw_version=device.build,
-        serial_number=device.device_sn,
-    )
-
-    coordinator = PinecilCoordinator(hass, pinecil, device_info)
+    coordinator = PinecilCoordinator(hass, pinecil)
     await coordinator.async_config_entry_first_refresh()
 
     entry.runtime_data = coordinator

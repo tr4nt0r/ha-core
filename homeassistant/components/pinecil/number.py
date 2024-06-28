@@ -5,7 +5,12 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from pynecil import CharSetting, LiveDataResponse, SettingsDataResponse
+from pynecil import (
+    CharSetting,
+    CommunicationError,
+    LiveDataResponse,
+    SettingsDataResponse,
+)
 
 from homeassistant.components.number import (
     NumberDeviceClass,
@@ -20,12 +25,13 @@ from homeassistant.const import (
     UnitOfTime,
 )
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import PinecilConfigEntry
-from .const import MAX_TEMP, MIN_TEMP, PinecilEntity
+from .const import DOMAIN, MAX_TEMP, MIN_TEMP, PinecilEntity
 from .coordinator import PinecilCoordinator
+from .entity import PinecilBaseEntity
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -142,12 +148,12 @@ async def async_setup_entry(
     coordinator = entry.runtime_data
 
     async_add_entities(
-        PinecilNumber(coordinator, description, entry)
+        PinecilNumber(coordinator=coordinator, entity_description=description)
         for description in SENSOR_DESCRIPTIONS
     )
 
 
-class PinecilNumber(CoordinatorEntity[PinecilCoordinator], NumberEntity):
+class PinecilNumber(PinecilBaseEntity, NumberEntity):
     """Implementation of a Pinecil sensor."""
 
     _attr_has_entity_name = True
@@ -157,19 +163,22 @@ class PinecilNumber(CoordinatorEntity[PinecilCoordinator], NumberEntity):
         self,
         coordinator: PinecilCoordinator,
         entity_description: PinecilNumberEntityDescription,
-        entry: PinecilConfigEntry,
     ) -> None:
         """Initialize the sensor."""
-        super().__init__(coordinator, context=entity_description.set_key)
-        self.entity_description = entity_description
-        self._attr_unique_id = f"{entry.unique_id}_{entity_description.key}"
-        self.device_info = self.coordinator.device_info
+        super().__init__(
+            coordinator, entity_description, context=entity_description.set_key
+        )
 
     async def async_set_native_value(self, value: float) -> None:
         """Update the current value."""
-        await self.coordinator.pinecil.write(self.entity_description.set_key, value)
-        await self.coordinator.save_settings()
-        await self.coordinator.update_settings(no_throttle=True)
+        try:
+            await self.coordinator.pinecil.write(self.entity_description.set_key, value)
+            await self.coordinator.save_settings()
+        except CommunicationError as e:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="write_settings_to_flash_failed",
+            ) from e
 
     @property
     def native_value(self) -> float | int | None:

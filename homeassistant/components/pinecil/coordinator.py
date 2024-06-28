@@ -9,14 +9,13 @@ import logging
 from pynecil import (
     CharSetting,
     CommunicationError,
+    DeviceInfoResponse,
     LiveDataResponse,
     Pynecil,
     SettingsDataResponse,
 )
 
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DOMAIN
@@ -32,10 +31,9 @@ class PinecilCoordinator(DataUpdateCoordinator[LiveDataResponse]):
 
     _save_delayed_task: asyncio.Task | None = None
     settings: SettingsDataResponse = SettingsDataResponse()
+    device: DeviceInfoResponse | None = None
 
-    def __init__(
-        self, hass: HomeAssistant, pinecil: Pynecil, device_info: DeviceInfo
-    ) -> None:
+    def __init__(self, hass: HomeAssistant, pinecil: Pynecil) -> None:
         """Initialize Pinecil coordinator."""
         super().__init__(
             hass,
@@ -45,12 +43,13 @@ class PinecilCoordinator(DataUpdateCoordinator[LiveDataResponse]):
         )
         self.pinecil = pinecil
         self.hass = hass
-        self.device_info = device_info
 
     async def _async_update_data(self) -> LiveDataResponse:
         """Fetch data from Pinecil."""
 
         try:
+            if not self.device:
+                self.device = await self.pinecil.get_device_info()
             await self.update_settings()
 
             return await self.pinecil.get_live_data()
@@ -76,15 +75,9 @@ class PinecilCoordinator(DataUpdateCoordinator[LiveDataResponse]):
             This is done to reduce write cycles to the internal flash.
             """
             await asyncio.sleep(20)
-            try:
-                await self.pinecil.write(CharSetting.SETTINGS_SAVE, 1)
-                _LOGGER.debug("Writing settings to flash")
-            except CommunicationError as e:
-                await self.pinecil.disconnect()
-                raise HomeAssistantError(
-                    translation_domain=DOMAIN,
-                    translation_key="write_settings_to_flash_failed",
-                ) from e
+
+            await self.pinecil.write(CharSetting.SETTINGS_SAVE, 1)
+            _LOGGER.debug("Writing settings to flash")
 
         if not self._save_delayed_task or self._save_delayed_task.done():
             self._save_delayed_task = await self.hass.async_create_task(save_delayed())
