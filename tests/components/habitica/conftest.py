@@ -21,26 +21,24 @@ USER_INPUT = {
 }
 
 TEST_DATA_PROFILE = {
-    "data": {
-        "api_user": "test-api-user",
-        "profile": {"name": TEST_USER_NAME},
-        "stats": {
-            "class": "warrior",
-            "con": 1,
-            "exp": 2,
-            "gp": 3,
-            "hp": 4,
-            "int": 5,
-            "lvl": 6,
-            "maxHealth": 7,
-            "maxMP": 8,
-            "mp": 9,
-            "per": 10,
-            "points": 11,
-            "str": 12,
-            "toNextLevel": 13,
-        },
-    }
+    "api_user": "test-api-user",
+    "profile": {"name": TEST_USER_NAME},
+    "stats": {
+        "class": "warrior",
+        "con": 1,
+        "exp": 2,
+        "gp": 3,
+        "hp": 4,
+        "int": 5,
+        "lvl": 6,
+        "maxHealth": 7,
+        "maxMP": 8,
+        "mp": 9,
+        "per": 10,
+        "points": 11,
+        "str": 12,
+        "toNextLevel": 13,
+    },
 }
 
 
@@ -65,12 +63,16 @@ def mock_config_entry() -> MockConfigEntry:
 @pytest.fixture(name="habitipy")
 def mock_habitipy() -> Generator[AsyncMock, None, None]:
     """Mock habitipy."""
-    with patch(
-        "homeassistant.components.habitica.HabitipyAsync",
-        new_callable=AsyncMock(),
-    ) as mock_obj:
-        client = mock_obj
+    with (
+        patch(
+            "tests.components.habitica.test_todo.HabitipyAsync", autospec=True
+        ) as mock_obj,
+        patch("homeassistant.components.habitica.HabitipyAsync", new=mock_obj),
+    ):
+        client = mock_obj.return_value
+        client.user = AsyncMock()
+        client.user.return_value.get = AsyncMock()
+        client.user.get.return_value = AsyncMock()
+        client.user.get.return_value = TEST_DATA_PROFILE
 
-        client.user.return_value = AsyncMock()
-
-        yield mock_obj
+        yield client

@@ -3,6 +3,7 @@
 from collections.abc import AsyncGenerator
 from unittest.mock import AsyncMock, patch
 
+from habitipy.aio import HabitipyAsync
 import pytest
 from syrupy.assertion import SnapshotAssertion
 
@@ -10,6 +11,8 @@ from homeassistant.config_entries import ConfigEntryState
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
+
+from .conftest import TEST_DATA_PROFILE
 
 from tests.common import MockConfigEntry, snapshot_platform
 
@@ -22,6 +25,12 @@ async def todo_only() -> AsyncGenerator[None, None]:
         [Platform.TODO],
     ):
         yield
+
+
+async def some_function_that_uses_habitica(habitipy: AsyncMock):
+    """."""
+    api = HabitipyAsync()
+    assert await api.user.get(userFields="profile") == TEST_DATA_PROFILE
 
 
 async def test_setup(
