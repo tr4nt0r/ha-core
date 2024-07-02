@@ -46,7 +46,7 @@ class HabiticaDataUpdateCoordinator(DataUpdateCoordinator[HabiticaData]):
         user_fields = set(self.async_contexts()) | ADDITIONAL_USER_FIELDS
 
         try:
-            user_response = await self.api.user.get(userFields=",".join(user_fields))
+            user_response = await self.api.user.get()
             tasks_response = await self.api.tasks.user.get()
             tasks_response.extend(await self.api.tasks.user.get(type="completedTodos"))
         except ClientResponseError as error:
