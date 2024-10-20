@@ -5,11 +5,12 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import timedelta
-from http import HTTPStatus
 import logging
 from typing import Any
 
-from aiohttp import ClientResponseError
+from aiohttp import ClientError
+from habiticalib import Habitica, HabiticaException, TaskFilter, TooManyRequestsError
+from habiticalib.types import TaskData, UserData
 from habitipy.aio import HabitipyAsync
 
 from homeassistant.config_entries import ConfigEntry
@@ -27,8 +28,8 @@ _LOGGER = logging.getLogger(__name__)
 class HabiticaData:
     """Coordinator data class."""
 
-    user: dict[str, Any]
-    tasks: list[dict]
+    user: UserData
+    tasks: list[TaskData]
 
 
 class HabiticaDataUpdateCoordinator(DataUpdateCoordinator[HabiticaData]):
@@ -36,7 +37,9 @@ class HabiticaDataUpdateCoordinator(DataUpdateCoordinator[HabiticaData]):
 
     config_entry: ConfigEntry
 
-    def __init__(self, hass: HomeAssistant, habitipy: HabitipyAsync) -> None:
+    def __init__(
+        self, hass: HomeAssistant, habitipy: HabitipyAsync, habitica: Habitica
+    ) -> None:
         """Initialize the Habitica data coordinator."""
         super().__init__(
             hass,
@@ -51,19 +54,24 @@ class HabiticaDataUpdateCoordinator(DataUpdateCoordinator[HabiticaData]):
             ),
         )
         self.api = habitipy
+        self.habitica = habitica
 
     async def _async_update_data(self) -> HabiticaData:
         try:
-            user_response = await self.api.user.get()
-            tasks_response = await self.api.tasks.user.get()
-            tasks_response.extend(await self.api.tasks.user.get(type="completedTodos"))
-        except ClientResponseError as error:
-            if error.status == HTTPStatus.TOO_MANY_REQUESTS:
-                _LOGGER.debug("Rate limit exceeded, will try again later")
-                return self.data
-            raise UpdateFailed(f"Unable to connect to Habitica: {error}") from error
+            user = await self.habitica.get_user()
+            task = await self.habitica.get_tasks()
+            task_completed = await self.habitica.get_tasks(TaskFilter.COMPLETED_TODOS)
+        except TooManyRequestsError:
+            _LOGGER.debug("Rate limit exceeded, will try again later")
+            return self.data
+        except HabiticaException as e:
+            raise UpdateFailed(
+                f"Unable to connect to Habitica {e.error.message}"
+            ) from e
+        except ClientError as e:
+            raise UpdateFailed(f"Error fetching Habitica data: {e.args[0]}") from e
 
-        return HabiticaData(user=user_response, tasks=tasks_response)
+        return HabiticaData(user=user.data, tasks=[*task.data, *task_completed.data])
 
     async def execute(
         self, func: Callable[[HabiticaDataUpdateCoordinator], Any]
@@ -72,12 +80,15 @@ class HabiticaDataUpdateCoordinator(DataUpdateCoordinator[HabiticaData]):
 
         try:
             await func(self)
-        except ClientResponseError as e:
-            if e.status == HTTPStatus.TOO_MANY_REQUESTS:
-                raise ServiceValidationError(
-                    translation_domain=DOMAIN,
-                    translation_key="setup_rate_limit_exception",
-                ) from e
+        except TooManyRequestsError as e:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="setup_rate_limit_exception",
+                translation_placeholders={
+                    "retry_after": f"{round(e.retry_after or 0)}"
+                },
+            ) from e
+        except (ClientError, HabiticaException) as e:
             raise HomeAssistantError(
                 translation_domain=DOMAIN,
                 translation_key="service_call_exception",

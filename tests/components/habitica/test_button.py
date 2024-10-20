@@ -55,6 +55,10 @@ async def test_buttons(
         json=load_json_object_fixture(f"{fixture}.json", DOMAIN),
     )
     aioclient_mock.get(
+        f"{DEFAULT_URL}/api/v3/user?userFields=profile",
+        json=load_json_object_fixture("user.json", DOMAIN),
+    )
+    aioclient_mock.get(
         f"{DEFAULT_URL}/api/v3/tasks/user",
         params={"type": "completedTodos"},
         json=load_json_object_fixture("completed_todos.json", DOMAIN),
@@ -155,6 +159,10 @@ async def test_button_press(
         json=load_json_object_fixture(f"{fixture}.json", DOMAIN),
     )
     aioclient_mock.get(
+        f"{DEFAULT_URL}/api/v3/user?userFields=profile",
+        json=load_json_object_fixture("user.json", DOMAIN),
+    )
+    aioclient_mock.get(
         f"{DEFAULT_URL}/api/v3/tasks/user",
         params={"type": "completedTodos"},
         json=load_json_object_fixture("completed_todos.json", DOMAIN),
@@ -169,7 +177,9 @@ async def test_button_press(
 
     assert config_entry.state is ConfigEntryState.LOADED
 
-    aioclient_mock.post(f"{DEFAULT_URL}/api/v3/{api_url}", json={"data": None})
+    aioclient_mock.post(
+        f"{DEFAULT_URL}/api/v3/{api_url}", json={"success": True, "data": {}}
+    )
 
     await hass.services.async_call(
         BUTTON_DOMAIN,
@@ -207,7 +217,7 @@ async def test_button_press(
     [
         (
             HTTPStatus.TOO_MANY_REQUESTS,
-            "Rate limit exceeded, try again later",
+            "Rate limit exceeded, retry in 0 seconds",
             ServiceValidationError,
         ),
         (
@@ -217,7 +227,7 @@ async def test_button_press(
         ),
         (
             HTTPStatus.UNAUTHORIZED,
-            "Unable to complete action, the required conditions are not met",
+            "Unable to complete action: error msg",
             ServiceValidationError,
         ),
     ],
@@ -243,7 +253,12 @@ async def test_button_press_exceptions(
     mock_habitica.post(
         f"{DEFAULT_URL}/api/v3/{api_url}",
         status=status_code,
-        json={"data": None},
+        json={
+            "success": False,
+            "data": {},
+            "error": "error code",
+            "message": "error msg",
+        },
     )
 
     with pytest.raises(exception, match=msg):
@@ -319,7 +334,7 @@ async def test_button_unavailable(
         f"{DEFAULT_URL}/api/v3/tasks/user",
         json=load_json_object_fixture("tasks.json", DOMAIN),
     )
-    aioclient_mock.get(re.compile(r".*"), json={"data": []})
+    aioclient_mock.get(re.compile(r".*"), json={"success": True, "data": []})
 
     config_entry.add_to_hass(hass)
     await hass.config_entries.async_setup(config_entry.entry_id)

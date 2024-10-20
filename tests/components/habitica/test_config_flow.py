@@ -1,8 +1,9 @@
 """Test the habitica config flow."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
-from aiohttp import ClientResponseError
+from habiticalib import BadRequestError, HabiticaErrorResponse, NotAuthorizedError
+from multidict import CIMultiDict, CIMultiDictProxy
 import pytest
 
 from homeassistant import config_entries
@@ -22,13 +23,14 @@ MOCK_DATA_LOGIN_STEP = {
     CONF_PASSWORD: "test-password",
 }
 MOCK_DATA_ADVANCED_STEP = {
-    CONF_API_USER: "test-api-user",
-    CONF_API_KEY: "test-api-key",
+    CONF_API_USER: "5f359083-ef78-4af0-985a-0b2c6d05797c",
+    CONF_API_KEY: "94ffa5cb-43f3-4715-8592-584a97422b67",
     CONF_URL: DEFAULT_URL,
     CONF_VERIFY_SSL: True,
 }
 
 
+@pytest.mark.usefixtures("mock_habitica")
 async def test_form_login(hass: HomeAssistant) -> None:
     """Test we get the login form."""
 
@@ -47,18 +49,7 @@ async def test_form_login(hass: HomeAssistant) -> None:
     assert result["errors"] == {}
     assert result["step_id"] == "login"
 
-    mock_obj = MagicMock()
-    mock_obj.user.auth.local.login.post = AsyncMock()
-    mock_obj.user.auth.local.login.post.return_value = {
-        "id": "test-api-user",
-        "apiToken": "test-api-key",
-        "username": "test-username",
-    }
     with (
-        patch(
-            "homeassistant.components.habitica.config_flow.HabitipyAsync",
-            return_value=mock_obj,
-        ),
         patch(
             "homeassistant.components.habitica.async_setup", return_value=True
         ) as mock_setup,
@@ -86,12 +77,27 @@ async def test_form_login(hass: HomeAssistant) -> None:
 @pytest.mark.parametrize(
     ("raise_error", "text_error"),
     [
-        (ClientResponseError(MagicMock(), (), status=400), "cannot_connect"),
-        (ClientResponseError(MagicMock(), (), status=401), "invalid_auth"),
+        (
+            BadRequestError(
+                HabiticaErrorResponse(success=False, error="", message=""),
+                CIMultiDictProxy(CIMultiDict()),
+            ),
+            "cannot_connect",
+        ),
+        (
+            NotAuthorizedError(
+                HabiticaErrorResponse(success=False, error="", message=""),
+                CIMultiDictProxy(CIMultiDict()),
+            ),
+            "invalid_auth",
+        ),
         (IndexError(), "unknown"),
     ],
+    ids=["cannot_connect", "invalid_auth", "unknown"],
 )
-async def test_form_login_errors(hass: HomeAssistant, raise_error, text_error) -> None:
+async def test_form_login_errors(
+    hass: HomeAssistant, raise_error, text_error, mock_habiticalib: AsyncMock
+) -> None:
     """Test we handle invalid credentials error."""
 
     result = await hass.config_entries.flow.async_init(
@@ -105,21 +111,18 @@ async def test_form_login_errors(hass: HomeAssistant, raise_error, text_error) -
         DOMAIN, context={"source": "login"}
     )
 
-    mock_obj = MagicMock()
-    mock_obj.user.auth.local.login.post = AsyncMock(side_effect=raise_error)
-    with patch(
-        "homeassistant.components.habitica.config_flow.HabitipyAsync",
-        return_value=mock_obj,
-    ):
-        result2 = await hass.config_entries.flow.async_configure(
-            result["flow_id"],
-            user_input=MOCK_DATA_LOGIN_STEP,
-        )
+    mock_habiticalib.login.side_effect = raise_error
+
+    result2 = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        user_input=MOCK_DATA_LOGIN_STEP,
+    )
 
     assert result2["type"] is FlowResultType.FORM
     assert result2["errors"] == {"base": text_error}
 
 
+@pytest.mark.usefixtures("mock_habitica")
 async def test_form_advanced(hass: HomeAssistant) -> None:
     """Test we get the form."""
 
@@ -144,15 +147,7 @@ async def test_form_advanced(hass: HomeAssistant) -> None:
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {}
 
-    mock_obj = MagicMock()
-    mock_obj.user.get = AsyncMock()
-    mock_obj.user.get.return_value = {"auth": {"local": {"username": "test-username"}}}
-
     with (
-        patch(
-            "homeassistant.components.habitica.config_flow.HabitipyAsync",
-            return_value=mock_obj,
-        ),
         patch(
             "homeassistant.components.habitica.async_setup", return_value=True
         ) as mock_setup,
@@ -180,13 +175,29 @@ async def test_form_advanced(hass: HomeAssistant) -> None:
 @pytest.mark.parametrize(
     ("raise_error", "text_error"),
     [
-        (ClientResponseError(MagicMock(), (), status=400), "cannot_connect"),
-        (ClientResponseError(MagicMock(), (), status=401), "invalid_auth"),
+        (
+            BadRequestError(
+                HabiticaErrorResponse(success=False, error="", message=""),
+                CIMultiDictProxy(CIMultiDict()),
+            ),
+            "cannot_connect",
+        ),
+        (
+            NotAuthorizedError(
+                HabiticaErrorResponse(success=False, error="", message=""),
+                CIMultiDictProxy(CIMultiDict()),
+            ),
+            "invalid_auth",
+        ),
         (IndexError(), "unknown"),
     ],
+    ids=["cannot_connect", "invalid_auth", "unknown"],
 )
 async def test_form_advanced_errors(
-    hass: HomeAssistant, raise_error, text_error
+    hass: HomeAssistant,
+    raise_error,
+    text_error,
+    mock_habiticalib: AsyncMock,
 ) -> None:
     """Test we handle invalid credentials error."""
 
@@ -201,17 +212,12 @@ async def test_form_advanced_errors(
         DOMAIN, context={"source": "advanced"}
     )
 
-    mock_obj = MagicMock()
-    mock_obj.user.get = AsyncMock(side_effect=raise_error)
+    mock_habiticalib.get_user.side_effect = raise_error
 
-    with patch(
-        "homeassistant.components.habitica.config_flow.HabitipyAsync",
-        return_value=mock_obj,
-    ):
-        result2 = await hass.config_entries.flow.async_configure(
-            result["flow_id"],
-            user_input=MOCK_DATA_ADVANCED_STEP,
-        )
+    result2 = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        user_input=MOCK_DATA_ADVANCED_STEP,
+    )
 
     assert result2["type"] is FlowResultType.FORM
     assert result2["errors"] == {"base": text_error}

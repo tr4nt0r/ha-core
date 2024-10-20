@@ -72,7 +72,7 @@ async def test_turn_on_off_toggle(
 
     mock_habitica.post(
         f"{DEFAULT_URL}/api/v3/user/sleep",
-        json={"success": True, "data": False},
+        json={"success": True, "data": False, "error": "error", "message": "error msg"},
     )
     config_entry.add_to_hass(hass)
     await hass.config_entries.async_setup(config_entry.entry_id)
@@ -124,7 +124,7 @@ async def test_turn_on_off_toggle_exceptions(
     mock_habitica.post(
         f"{DEFAULT_URL}/api/v3/user/sleep",
         status=status_code,
-        json={"success": True, "data": False},
+        json={"success": True, "data": False, "error": "error", "message": "error msg"},
     )
 
     with pytest.raises(expected_exception=exception):

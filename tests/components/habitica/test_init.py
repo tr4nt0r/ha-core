@@ -4,7 +4,6 @@ import datetime
 from http import HTTPStatus
 import logging
 
-from freezegun.api import FrozenDateTimeFactory
 import pytest
 
 from homeassistant.components.habitica.const import (
@@ -19,6 +18,7 @@ from homeassistant.components.habitica.const import (
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.const import ATTR_NAME
 from homeassistant.core import Event, HomeAssistant
+import homeassistant.util.dt as dt_util
 
 from tests.common import (
     MockConfigEntry,
@@ -107,6 +107,7 @@ async def test_config_entry_not_ready(
     aioclient_mock.get(
         f"{DEFAULT_URL}/api/v3/user",
         status=status,
+        json=load_json_object_fixture("not_found.json", DOMAIN),
     )
 
     config_entry.add_to_hass(hass)
@@ -130,6 +131,7 @@ async def test_coordinator_update_failed(
     aioclient_mock.get(
         f"{DEFAULT_URL}/api/v3/tasks/user",
         status=HTTPStatus.NOT_FOUND,
+        json=load_json_object_fixture("not_found.json", DOMAIN),
     )
 
     config_entry.add_to_hass(hass)
@@ -144,7 +146,6 @@ async def test_coordinator_rate_limited(
     config_entry: MockConfigEntry,
     mock_habitica: AiohttpClientMocker,
     caplog: pytest.LogCaptureFixture,
-    freezer: FrozenDateTimeFactory,
 ) -> None:
     """Test coordinator when rate limited."""
 
@@ -158,11 +159,11 @@ async def test_coordinator_rate_limited(
     mock_habitica.get(
         f"{DEFAULT_URL}/api/v3/user",
         status=HTTPStatus.TOO_MANY_REQUESTS,
+        json=load_json_object_fixture("not_found.json", DOMAIN),
     )
 
     with caplog.at_level(logging.DEBUG):
-        freezer.tick(datetime.timedelta(seconds=60))
-        async_fire_time_changed(hass)
+        async_fire_time_changed(hass, dt_util.utcnow() + datetime.timedelta(seconds=60))
         await hass.async_block_till_done()
 
         assert "Rate limit exceeded, will try again later" in caplog.text

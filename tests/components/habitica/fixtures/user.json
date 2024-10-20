@@ -1,6 +1,11 @@
 {
+  "success": true,
   "data": {
-    "api_user": "test-api-user",
+    "auth": {
+      "local": {
+        "username": "test-username"
+      }
+    },
     "profile": { "name": "test-user" },
     "stats": {
       "buffs": {
@@ -58,7 +63,17 @@
         "key": "dustbunnies"
       }
     },
+    "purchased": {
+      "plan": {
+        "consecutive": {
+          "trinkets": 2
+        }
+      }
+    },
     "needsCron": true,
-    "lastCron": "2024-09-21T22:01:55.586Z"
-  }
+    "lastCron": "2024-09-21T22:01:55.586Z",
+    "balance": 3
+  },
+  "userV": 589,
+  "appVersion": "5.28.6"
 }

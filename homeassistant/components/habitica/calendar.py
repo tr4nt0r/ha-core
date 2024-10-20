@@ -4,8 +4,10 @@ from __future__ import annotations
 
 from datetime import date, datetime, timedelta
 from enum import StrEnum
+from uuid import UUID
 
 from dateutil.rrule import rrule
+from habiticalib import TaskType
 
 from homeassistant.components.calendar import (
     CalendarEntity,
@@ -16,10 +18,9 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util import dt as dt_util
 
-from . import HabiticaConfigEntry
 from .coordinator import HabiticaDataUpdateCoordinator
 from .entity import HabiticaBase
-from .types import HabiticaTaskType
+from .types import HabiticaConfigEntry
 from .util import build_rrule, get_recurrence_rule
 
 
@@ -73,13 +74,13 @@ class HabiticaTodosCalendarEntity(HabiticaCalendarEntity):
         events = []
         for task in self.coordinator.data.tasks:
             if not (
-                task["type"] == HabiticaTaskType.TODO
-                and not task["completed"]
-                and task.get("date")  # only if has due date
+                task.Type is TaskType.TODO
+                and not task.completed
+                and task.date  # only if has due date
             ):
                 continue
 
-            start = dt_util.start_of_local_day(datetime.fromisoformat(task["date"]))
+            start = dt_util.start_of_local_day(task.date)
             end = start + timedelta(days=1)
             # return current and upcoming events or events within the requested range
 
@@ -95,16 +96,16 @@ class HabiticaTodosCalendarEntity(HabiticaCalendarEntity):
                 CalendarEvent(
                     start=start.date(),
                     end=end.date(),
-                    summary=task["text"],
-                    description=task["notes"],
-                    uid=task["id"],
+                    summary=task.text or "",
+                    description=task.notes,
+                    uid=str(task.id),
                 )
             )
         return sorted(
             events,
             key=lambda event: (
                 event.start,
-                self.coordinator.data.user["tasksOrder"]["todos"].index(event.uid),
+                self.coordinator.data.user.tasksOrder.todos.index(UUID(event.uid)),
             ),
         )
 
@@ -132,9 +133,7 @@ class HabiticaDailiesCalendarEntity(HabiticaCalendarEntity):
     @property
     def today(self) -> datetime:
         """Habitica daystart."""
-        return dt_util.start_of_local_day(
-            datetime.fromisoformat(self.coordinator.data.user["lastCron"])
-        )
+        return dt_util.start_of_local_day(self.coordinator.data.user.lastCron)
 
     def end_date(self, recurrence: datetime, end: datetime | None = None) -> date:
         """Calculate the end date for a yesterdaily.
@@ -175,7 +174,7 @@ class HabiticaDailiesCalendarEntity(HabiticaCalendarEntity):
         events = []
         for task in self.coordinator.data.tasks:
             #  only dailies that that are not 'grey dailies'
-            if not (task["type"] == HabiticaTaskType.DAILY and task["everyX"]):
+            if not (task.Type is TaskType.DAILY and task.everyX):
                 continue
 
             recurrences = build_rrule(task)
@@ -184,7 +183,7 @@ class HabiticaDailiesCalendarEntity(HabiticaCalendarEntity):
             )
             for recurrence in recurrence_dates:
                 is_future_event = recurrence > self.today
-                is_current_event = recurrence <= self.today and not task["completed"]
+                is_current_event = recurrence <= self.today and not task.completed
 
                 if not (is_future_event or is_current_event):
                     continue
@@ -193,9 +192,9 @@ class HabiticaDailiesCalendarEntity(HabiticaCalendarEntity):
                     CalendarEvent(
                         start=recurrence.date(),
                         end=self.end_date(recurrence, end_date),
-                        summary=task["text"],
-                        description=task["notes"],
-                        uid=task["id"],
+                        summary=task.text or "",
+                        description=task.notes,
+                        uid=str(task.id),
                         rrule=get_recurrence_rule(recurrences),
                     )
                 )
@@ -203,7 +202,7 @@ class HabiticaDailiesCalendarEntity(HabiticaCalendarEntity):
             events,
             key=lambda event: (
                 event.start,
-                self.coordinator.data.user["tasksOrder"]["dailys"].index(event.uid),
+                self.coordinator.data.user.tasksOrder.dailys.index(UUID(event.uid)),
             ),
         )
 

@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-from http import HTTPStatus
 import logging
-from typing import Any
 
-from aiohttp import ClientResponseError
+from aiohttp import ClientError
+from habiticalib import NotAuthorizedError, NotFoundError, Skill, TooManyRequestsError
 import voluptuous as vol
 
 from homeassistant.config_entries import ConfigEntryState
@@ -104,18 +103,23 @@ def async_setup_services(hass: HomeAssistant) -> None:
         """Skill action."""
         entry = get_config_entry(hass, call.data[ATTR_CONFIG_ENTRY])
         coordinator = entry.runtime_data
-        skill = {
-            "pickpocket": {"spellId": "pickPocket", "cost": "10 MP"},
-            "backstab": {"spellId": "backStab", "cost": "15 MP"},
-            "smash": {"spellId": "smash", "cost": "10 MP"},
-            "fireball": {"spellId": "fireball", "cost": "10 MP"},
+        SKILL_MAP = {
+            "pickpocket": Skill.PICKPOCKET,
+            "backstab": Skill.BACKSTAB,
+            "smash": Skill.BRUTAL_SMASH,
+            "fireball": Skill.BURST_OF_FLAMES,
+        }
+        SKILL_COST_MAP = {
+            "pickpocket": "10 MP",
+            "backstab": "15 MP",
+            "smash": "10 MP",
+            "fireball": "10 MP",
         }
         try:
             task_id = next(
-                task["id"]
+                task.id
                 for task in coordinator.data.tasks
-                if call.data[ATTR_TASK] in (task["id"], task.get("alias"))
-                or call.data[ATTR_TASK] == task["text"]
+                if call.data[ATTR_TASK] in (task.text, str(task.id), task.alias)
             )
         except StopIteration as e:
             raise ServiceValidationError(
@@ -125,40 +129,43 @@ def async_setup_services(hass: HomeAssistant) -> None:
             ) from e
 
         try:
-            response: dict[str, Any] = await coordinator.api.user.class_.cast[
-                skill[call.data[ATTR_SKILL]]["spellId"]
-            ].post(targetId=task_id)
-        except ClientResponseError as e:
-            if e.status == HTTPStatus.TOO_MANY_REQUESTS:
-                raise ServiceValidationError(
-                    translation_domain=DOMAIN,
-                    translation_key="setup_rate_limit_exception",
-                ) from e
-            if e.status == HTTPStatus.UNAUTHORIZED:
-                raise ServiceValidationError(
-                    translation_domain=DOMAIN,
-                    translation_key="not_enough_mana",
-                    translation_placeholders={
-                        "cost": skill[call.data[ATTR_SKILL]]["cost"],
-                        "mana": f"{int(coordinator.data.user.get("stats", {}).get("mp", 0))} MP",
-                    },
-                ) from e
-            if e.status == HTTPStatus.NOT_FOUND:
-                # could also be task not found, but the task is looked up
-                # before the request, so most likely wrong skill selected
-                # or the skill hasn't been unlocked yet.
-                raise ServiceValidationError(
-                    translation_domain=DOMAIN,
-                    translation_key="skill_not_found",
-                    translation_placeholders={"skill": call.data[ATTR_SKILL]},
-                ) from e
+            response = await coordinator.habitica.cast_skill(
+                SKILL_MAP[call.data[ATTR_SKILL]], task_id
+            )
+        except TooManyRequestsError as e:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="setup_rate_limit_exception",
+                translation_placeholders={
+                    "retry_after": f"{round(e.retry_after or 0)}"
+                },
+            ) from e
+        except NotAuthorizedError as e:
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="not_enough_mana",
+                translation_placeholders={
+                    "cost": SKILL_COST_MAP[call.data[ATTR_SKILL]],
+                    "mana": f"{int(coordinator.data.user.stats.mp or 0)} MP",
+                },
+            ) from e
+        except NotFoundError as e:
+            # could also be task not found, but the task is looked up
+            # before the request, so most likely wrong skill selected
+            # or the skill hasn't been unlocked yet.
+            raise ServiceValidationError(
+                translation_domain=DOMAIN,
+                translation_key="skill_not_found",
+                translation_placeholders={"skill": call.data[ATTR_SKILL]},
+            ) from e
+        except ClientError as e:
             raise HomeAssistantError(
                 translation_domain=DOMAIN,
                 translation_key="service_call_exception",
             ) from e
         else:
             await coordinator.async_request_refresh()
-            return response
+            return response.to_dict()
 
     hass.services.async_register(
         DOMAIN,

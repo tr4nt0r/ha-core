@@ -3,7 +3,6 @@
 from collections.abc import Generator
 from datetime import datetime
 from http import HTTPStatus
-import json
 import re
 from unittest.mock import patch
 
@@ -214,6 +213,7 @@ async def test_complete_todo_item_exception(
     mock_habitica.post(
         re.compile(f"{DEFAULT_URL}/api/v3/tasks/{uid}/score/.+"),
         status=HTTPStatus.NOT_FOUND,
+        json=load_json_object_fixture("not_found.json", DOMAIN),
     )
     with pytest.raises(
         expected_exception=ServiceValidationError,
@@ -281,11 +281,9 @@ async def test_update_todo_item(
         mock_habitica, "PUT", f"{DEFAULT_URL}/api/v3/tasks/{uid}"
     )
     assert mock_call
-    assert json.loads(mock_call[2]) == {
-        "date": date,
-        "notes": "test-description",
-        "text": "test-summary",
-    }
+    assert mock_call[2].get("notes") == "test-description"
+    assert mock_call[2].get("text") == "test-summary"
+    assert mock_call[2].get("date") == date
 
 
 async def test_update_todo_item_exception(
@@ -304,6 +302,7 @@ async def test_update_todo_item_exception(
     mock_habitica.put(
         f"{DEFAULT_URL}/api/v3/tasks/{uid}",
         status=HTTPStatus.NOT_FOUND,
+        json=load_json_object_fixture("not_found.json", DOMAIN),
     )
     with pytest.raises(
         expected_exception=ServiceValidationError,
@@ -359,11 +358,11 @@ async def test_add_todo_item(
         f"{DEFAULT_URL}/api/v3/tasks/user",
     )
     assert mock_call
-    assert json.loads(mock_call[2]) == {
+    assert mock_call[2] == {
         "date": "2024-07-30",
         "notes": "test-description",
         "text": "test-summary",
-        "type": "todo",
+        "Type": "todo",
     }
 
 
@@ -383,6 +382,7 @@ async def test_add_todo_item_exception(
     mock_habitica.post(
         f"{DEFAULT_URL}/api/v3/tasks/user",
         status=HTTPStatus.NOT_FOUND,
+        json=load_json_object_fixture("not_found.json", DOMAIN),
     )
     with pytest.raises(
         expected_exception=ServiceValidationError,
@@ -449,6 +449,7 @@ async def test_delete_todo_item_exception(
     mock_habitica.delete(
         f"{DEFAULT_URL}/api/v3/tasks/{uid}",
         status=HTTPStatus.NOT_FOUND,
+        json=load_json_object_fixture("not_found.json", DOMAIN),
     )
     with pytest.raises(
         expected_exception=ServiceValidationError,
@@ -507,6 +508,7 @@ async def test_delete_completed_todo_items_exception(
     mock_habitica.post(
         f"{DEFAULT_URL}/api/v3/tasks/clearCompletedTodos",
         status=HTTPStatus.NOT_FOUND,
+        json=load_json_object_fixture("not_found.json", DOMAIN),
     )
     with pytest.raises(
         expected_exception=ServiceValidationError,
@@ -554,11 +556,10 @@ async def test_move_todo_item(
 
     assert config_entry.state is ConfigEntryState.LOADED
 
-    for pos in (0, 1):
-        mock_habitica.post(
-            f"{DEFAULT_URL}/api/v3/tasks/{uid}/move/to/{pos}",
-            json={"data": {}, "success": True},
-        )
+    mock_habitica.post(
+        f"{DEFAULT_URL}/api/v3/tasks/{uid}/move/to/1",
+        json={"data": {}, "success": True},
+    )
 
     client = await hass_ws_client()
     # move to second position
@@ -573,6 +574,16 @@ async def test_move_todo_item(
     resp = await client.receive_json()
     assert resp.get("success")
 
+    assert mock_called_with(
+        mock_habitica,
+        "post",
+        f"{DEFAULT_URL}/api/v3/tasks/{uid}/move/to/1",
+    )
+
+    mock_habitica.post(
+        f"{DEFAULT_URL}/api/v3/tasks/{uid}/move/to/0",
+        json={"data": {}, "success": True},
+    )
     # move to top position
     data = {
         "id": id,
@@ -584,12 +595,11 @@ async def test_move_todo_item(
     resp = await client.receive_json()
     assert resp.get("success")
 
-    for pos in (0, 1):
-        assert mock_called_with(
-            mock_habitica,
-            "post",
-            f"{DEFAULT_URL}/api/v3/tasks/{uid}/move/to/{pos}",
-        )
+    assert mock_called_with(
+        mock_habitica,
+        "post",
+        f"{DEFAULT_URL}/api/v3/tasks/{uid}/move/to/0",
+    )
 
 
 async def test_move_todo_item_exception(
@@ -610,6 +620,7 @@ async def test_move_todo_item_exception(
     mock_habitica.post(
         f"{DEFAULT_URL}/api/v3/tasks/{uid}/move/to/0",
         status=HTTPStatus.NOT_FOUND,
+        json=load_json_object_fixture("not_found.json", DOMAIN),
     )
 
     client = await hass_ws_client()
@@ -666,7 +677,7 @@ async def test_next_due_date(
     aioclient_mock.get(
         f"{DEFAULT_URL}/api/v3/tasks/user",
         params={"type": "completedTodos"},
-        json={"data": []},
+        json={"success": True, "data": []},
     )
     aioclient_mock.get(
         f"{DEFAULT_URL}/api/v3/tasks/user",

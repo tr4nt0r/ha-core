@@ -1,6 +1,6 @@
 {
+  "success": true,
   "data": {
-    "api_user": "test-api-user",
     "profile": { "name": "test-user" },
     "stats": {
       "buffs": {

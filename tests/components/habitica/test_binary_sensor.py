@@ -65,7 +65,9 @@ async def test_pending_quest_states(
         f"{DEFAULT_URL}/api/v3/user",
         json=load_json_object_fixture(f"{fixture}.json", DOMAIN),
     )
-    aioclient_mock.get(f"{DEFAULT_URL}/api/v3/tasks/user", json={"data": []})
+    aioclient_mock.get(
+        f"{DEFAULT_URL}/api/v3/tasks/user", json={"success": True, "data": []}
+    )
 
     config_entry.add_to_hass(hass)
     await hass.config_entries.async_setup(config_entry.entry_id)

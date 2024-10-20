@@ -1,7 +1,9 @@
 """Tests for the habitica component."""
 
-from unittest.mock import patch
+from collections.abc import Generator
+from unittest.mock import AsyncMock, patch
 
+from habiticalib import HabiticaLoginResponse, HabiticaUserResponse
 import pytest
 from yarl import URL
 
@@ -9,7 +11,7 @@ from homeassistant.components.habitica.const import CONF_API_USER, DEFAULT_URL, 
 from homeassistant.const import CONF_API_KEY, CONF_URL
 from homeassistant.core import HomeAssistant
 
-from tests.common import MockConfigEntry, load_json_object_fixture
+from tests.common import MockConfigEntry, load_fixture, load_json_object_fixture
 from tests.test_util.aiohttp import AiohttpClientMocker
 
 
@@ -34,7 +36,7 @@ def mock_called_with(
         (
             call
             for call in mock_client.mock_calls
-            if call[0] == method.upper() and call[1] == URL(url)
+            if call[0].upper() == method.upper() and call[1] == URL(url)
         ),
         None,
     )
@@ -44,8 +46,16 @@ def mock_called_with(
 def mock_habitica(aioclient_mock: AiohttpClientMocker) -> AiohttpClientMocker:
     """Mock aiohttp requests."""
 
+    aioclient_mock.post(
+        f"{DEFAULT_URL}/api/v3/user/auth/local/login",
+        json=load_json_object_fixture("login.json", DOMAIN),
+    )
     aioclient_mock.get(
         f"{DEFAULT_URL}/api/v3/user", json=load_json_object_fixture("user.json", DOMAIN)
+    )
+    aioclient_mock.get(
+        f"{DEFAULT_URL}/api/v3/user?userFields=profile",
+        json=load_json_object_fixture("user.json", DOMAIN),
     )
     aioclient_mock.get(
         f"{DEFAULT_URL}/api/v3/tasks/user",
@@ -58,6 +68,30 @@ def mock_habitica(aioclient_mock: AiohttpClientMocker) -> AiohttpClientMocker:
     )
 
     return aioclient_mock
+
+
+@pytest.fixture
+def mock_habiticalib() -> Generator[AsyncMock]:
+    """Mock the habiticalib."""
+    with (
+        patch(
+            "homeassistant.components.habitica.Habitica.__aenter__",
+            autospec=True,
+        ) as mock_client,
+        patch(
+            "homeassistant.components.habitica.config_flow.Habitica.__aenter__",
+            new=mock_client,
+        ),
+    ):
+        client = mock_client.return_value
+        client.login.return_value = HabiticaLoginResponse.from_json(
+            load_fixture("login.json", DOMAIN)
+        )
+        client.get_user.return_value = HabiticaUserResponse.from_json(
+            load_fixture("user.json", DOMAIN)
+        )
+
+        yield client
 
 
 @pytest.fixture(name="config_entry")

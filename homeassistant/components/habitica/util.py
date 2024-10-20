@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import datetime
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from dateutil.rrule import (
     DAILY,
@@ -19,6 +19,7 @@ from dateutil.rrule import (
     YEARLY,
     rrule,
 )
+from habiticalib.types import Frequency, TaskData
 
 from homeassistant.components.automation import automations_with_entity
 from homeassistant.components.script import scripts_with_entity
@@ -26,50 +27,32 @@ from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 
 
-def next_due_date(task: dict[str, Any], last_cron: str) -> datetime.date | None:
+def next_due_date(task: TaskData, today: datetime.datetime) -> datetime.date | None:
     """Calculate due date for dailies and yesterdailies."""
 
-    if task["everyX"] == 0 or not task.get("nextDue"):  # grey dailies never become due
+    if task.everyX == 0 or not task.nextDue:  # grey dailies never become due
         return None
 
-    today = to_date(last_cron)
-    startdate = to_date(task["startDate"])
     if TYPE_CHECKING:
-        assert today
-        assert startdate
+        assert task.startDate
+    startdate = task.startDate
 
-    if task["isDue"] and not task["completed"]:
-        return to_date(last_cron)
+    if task.isDue and task.completed is False:
+        return dt_util.as_local(today).date()
 
     if startdate > today:
-        if task["frequency"] == "daily" or (
-            task["frequency"] in ("monthly", "yearly") and task["daysOfMonth"]
+        if task.frequency is Frequency.DAILY or (
+            task.frequency in (Frequency.MONTHLY, Frequency.YEARLY) and task.daysOfMonth
         ):
             return startdate
 
         if (
-            task["frequency"] in ("weekly", "monthly")
-            and (nextdue := to_date(task["nextDue"][0]))
-            and startdate > nextdue
+            task.frequency in (Frequency.WEEKLY, Frequency.MONTHLY)
+            and startdate > task.nextDue[0]
         ):
-            return to_date(task["nextDue"][1])
+            return dt_util.as_local(task.nextDue[1]).date()
 
-    return to_date(task["nextDue"][0])
-
-
-def to_date(date: str) -> datetime.date | None:
-    """Convert an iso date to a datetime.date object."""
-    try:
-        return dt_util.as_local(datetime.datetime.fromisoformat(date)).date()
-    except ValueError:
-        # sometimes nextDue dates are JavaScript datetime strings instead of iso:
-        # "Mon May 06 2024 00:00:00 GMT+0200"
-        try:
-            return dt_util.as_local(
-                datetime.datetime.strptime(date, "%a %b %d %Y %H:%M:%S %Z%z")
-            ).date()
-        except ValueError:
-            return None
+    return dt_util.as_local(task.nextDue[0]).date()
 
 
 def entity_used_in(hass: HomeAssistant, entity_id: str) -> list[str]:
@@ -79,34 +62,36 @@ def entity_used_in(hass: HomeAssistant, entity_id: str) -> list[str]:
     return used_in
 
 
-FREQUENCY_MAP = {"daily": DAILY, "weekly": WEEKLY, "monthly": MONTHLY, "yearly": YEARLY}
+FREQUENCY_MAP = {
+    Frequency.DAILY: DAILY,
+    Frequency.WEEKLY: WEEKLY,
+    Frequency.MONTHLY: MONTHLY,
+    Frequency.YEARLY: YEARLY,
+}
 WEEKDAY_MAP = {"m": MO, "t": TU, "w": WE, "th": TH, "f": FR, "s": SA, "su": SU}
 
 
-def build_rrule(task: dict[str, Any]) -> rrule:
+def build_rrule(task: TaskData) -> rrule:
     """Build rrule string."""
 
-    rrule_frequency = FREQUENCY_MAP.get(task["frequency"], DAILY)
-    weekdays = [
-        WEEKDAY_MAP[day] for day, is_active in task["repeat"].items() if is_active
-    ]
+    if TYPE_CHECKING:
+        assert task.frequency
+
+    rrule_frequency = FREQUENCY_MAP.get(task.frequency, DAILY)
+    weekdays = [day for key, day in WEEKDAY_MAP.items() if getattr(task.repeat, key)]
     bymonthday = (
-        task["daysOfMonth"]
-        if rrule_frequency == MONTHLY and task["daysOfMonth"]
-        else None
+        task.daysOfMonth if rrule_frequency == MONTHLY and task.daysOfMonth else None
     )
 
     bysetpos = None
-    if rrule_frequency == MONTHLY and task["weeksOfMonth"]:
-        bysetpos = task["weeksOfMonth"]
+    if rrule_frequency == MONTHLY and task.weeksOfMonth:
+        bysetpos = task.weeksOfMonth
         weekdays = weekdays if weekdays else [MO]
 
     return rrule(
         freq=rrule_frequency,
-        interval=task["everyX"],
-        dtstart=dt_util.start_of_local_day(
-            datetime.datetime.fromisoformat(task["startDate"])
-        ),
+        interval=task.everyX or 1,
+        dtstart=dt_util.start_of_local_day(task.startDate),
         byweekday=weekdays if rrule_frequency in [WEEKLY, MONTHLY] else None,
         bymonthday=bymonthday,
         bysetpos=bysetpos,
