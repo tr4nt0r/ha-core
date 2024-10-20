@@ -8,6 +8,7 @@ from aiohttp import ClientResponseError
 from habitipy.aio import HabitipyAsync
 import voluptuous as vol
 
+from habiticalib import Habitica
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     APPLICATION_NAME,
@@ -57,7 +58,13 @@ CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 type HabiticaConfigEntry = ConfigEntry[HabiticaDataUpdateCoordinator]
 
 
-PLATFORMS = [Platform.BUTTON, Platform.SENSOR, Platform.SWITCH, Platform.TODO]
+PLATFORMS = [
+    Platform.BUTTON,
+    Platform.IMAGE,
+    Platform.SENSOR,
+    Platform.SWITCH,
+    Platform.TODO,
+]
 
 
 SERVICE_API_CALL_SCHEMA = vol.Schema(
@@ -74,6 +81,8 @@ SERVICE_CAST_SKILL_SCHEMA = vol.Schema(
         vol.Optional(ATTR_TASK): cv.string,
     }
 )
+
+XCLIENT_HEADERS = f"{DEVELOPER_ID} - {APPLICATION_NAME} {__version__}"
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
@@ -169,9 +178,7 @@ async def async_setup_entry(
 
         def _make_headers(self) -> dict[str, str]:
             headers = super()._make_headers()
-            headers.update(
-                {"x-client": f"{DEVELOPER_ID} - {APPLICATION_NAME} {__version__}"}
-            )
+            headers.update({"x-client": XCLIENT_HEADERS})
             return headers
 
     async def handle_api_call(call: ServiceCall) -> None:
@@ -213,6 +220,7 @@ async def async_setup_entry(
             "password": config_entry.data[CONF_API_KEY],
         },
     )
+    habitica = Habitica(session=websession, x_client=XCLIENT_HEADERS)
     try:
         user = await api.user.get(userFields="profile")
     except ClientResponseError as e:
@@ -230,7 +238,7 @@ async def async_setup_entry(
             data={**config_entry.data, CONF_NAME: name},
         )
 
-    coordinator = HabiticaDataUpdateCoordinator(hass, api)
+    coordinator = HabiticaDataUpdateCoordinator(hass, api, habitica)
     await coordinator.async_config_entry_first_refresh()
 
     config_entry.runtime_data = coordinator

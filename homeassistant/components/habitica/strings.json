@@ -48,6 +48,11 @@
         "name": "Revive from death"
       }
     },
+    "image": {
+      "avatar": {
+        "name": "Avatar"
+      }
+    },
     "sensor": {
       "display_name": {
         "name": "Display name"
