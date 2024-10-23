@@ -5,10 +5,10 @@ import logging
 from typing import Any
 
 from aiohttp import ClientResponseError
+from habiticalib import Habitica
 from habitipy.aio import HabitipyAsync
 import voluptuous as vol
 
-from habiticalib import Habitica
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     APPLICATION_NAME,
