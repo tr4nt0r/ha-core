@@ -1,0 +1,14 @@
+{
+  "domain": "playstation_network",
+  "name": "Playstation Network",
+  "codeowners": ["@jackjpowell"],
+  "config_flow": true,
+  "dependencies": ["network"],
+  "documentation": "https://www.home-assistant.io/integrations/playstation_network",
+  "homekit": {},
+  "integration_type": "device",
+  "iot_class": "cloud_polling",
+  "requirements": ["PSNAWP-HA==2.2.0"],
+  "ssdp": [],
+  "zeroconf": []
+}
