@@ -301,7 +301,7 @@
         'up': True,
         'updatedAt': '2024-07-12T09:58:45.438000+00:00',
         'userId': '5f359083-ef78-4af0-985a-0b2c6d05797c',
-        'value': 0.0,
+        'value': None,
         'weeksOfMonth': list([
         ]),
         'yesterDaily': None,
@@ -1725,7 +1725,7 @@
         'up': True,
         'updatedAt': '2024-07-12T09:58:45.438000+00:00',
         'userId': '5f359083-ef78-4af0-985a-0b2c6d05797c',
-        'value': 0.0,
+        'value': None,
         'weeksOfMonth': list([
         ]),
         'yesterDaily': None,
@@ -2625,7 +2625,7 @@
         'up': True,
         'updatedAt': '2024-07-12T09:58:45.438000+00:00',
         'userId': '5f359083-ef78-4af0-985a-0b2c6d05797c',
-        'value': 0.0,
+        'value': None,
         'weeksOfMonth': list([
         ]),
         'yesterDaily': None,
@@ -4042,7 +4042,7 @@
         'up': True,
         'updatedAt': '2024-07-12T09:58:45.438000+00:00',
         'userId': '5f359083-ef78-4af0-985a-0b2c6d05797c',
-        'value': 0.0,
+        'value': None,
         'weeksOfMonth': list([
         ]),
         'yesterDaily': None,
@@ -5508,7 +5508,7 @@
         'up': True,
         'updatedAt': '2024-07-12T09:58:45.438000+00:00',
         'userId': '5f359083-ef78-4af0-985a-0b2c6d05797c',
-        'value': 0.0,
+        'value': None,
         'weeksOfMonth': list([
         ]),
         'yesterDaily': None,

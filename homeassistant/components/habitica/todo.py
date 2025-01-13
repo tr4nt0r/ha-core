@@ -32,7 +32,7 @@ from homeassistant.util import dt as dt_util
 from .const import ASSETS_URL, DOMAIN
 from .coordinator import HabiticaConfigEntry, HabiticaDataUpdateCoordinator
 from .entity import HabiticaBase
-from .util import next_due_date
+from .util import apply_stats, next_due_date
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -248,9 +248,7 @@ class BaseHabiticaListEntity(HabiticaBase, TodoListEntity):
                 self.hass, message=msg, title="Habitica"
             )
         if score_result:
-            for field in self.coordinator.data.user.stats.__annotations__:
-                if (value := getattr(score_result.data, field)) is not None:
-                    setattr(self.coordinator.data.user.stats, field, value)
+            apply_stats(self.coordinator.data.user, score_result.data)
 
         self.coordinator.async_update_listeners()
 

@@ -63,6 +63,7 @@ from .const import (
     SERVICE_TRANSFORMATION,
 )
 from .coordinator import HabiticaConfigEntry
+from .util import apply_quest, apply_stats
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -206,8 +207,8 @@ def async_setup_services(hass: HomeAssistant) -> None:  # noqa: C901
         cost = COST_MAP[call.data[ATTR_SKILL]]
 
         try:
-            task_id = next(
-                task.id
+            task = next(
+                task
                 for task in coordinator.data.tasks
                 if call.data[ATTR_TASK] in (str(task.id), task.alias, task.text)
             )
@@ -219,7 +220,7 @@ def async_setup_services(hass: HomeAssistant) -> None:  # noqa: C901
             ) from e
 
         try:
-            response = await coordinator.habitica.cast_skill(skill, task_id)
+            response = await coordinator.habitica.cast_skill(skill, task.id)
         except TooManyRequestsError as e:
             raise HomeAssistantError(
                 translation_domain=DOMAIN,
@@ -257,7 +258,11 @@ def async_setup_services(hass: HomeAssistant) -> None:  # noqa: C901
                 translation_placeholders={"reason": str(e)},
             ) from e
         else:
-            await coordinator.async_request_refresh()
+            coordinator.data.user = response.data.user
+            if response.data.task:
+                task = response.data.task
+
+            coordinator.async_update_listeners()
             return asdict(response.data)
 
     async def manage_quests(call: ServiceCall) -> ServiceResponse:
@@ -305,6 +310,8 @@ def async_setup_services(hass: HomeAssistant) -> None:  # noqa: C901
                 translation_placeholders={"reason": str(e)},
             ) from e
         else:
+            apply_quest(coordinator.data.user, response.data)
+            coordinator.async_update_listeners()
             return asdict(response.data)
 
     for service in (
@@ -382,7 +389,8 @@ def async_setup_services(hass: HomeAssistant) -> None:  # noqa: C901
                 translation_placeholders={"reason": str(e)},
             ) from e
         else:
-            await coordinator.async_request_refresh()
+            apply_stats(coordinator.data.user, response.data)
+            coordinator.async_update_listeners()
             return asdict(response.data)
 
     async def transformation(call: ServiceCall) -> ServiceResponse:
@@ -465,6 +473,8 @@ def async_setup_services(hass: HomeAssistant) -> None:  # noqa: C901
                 translation_placeholders={"reason": str(e)},
             ) from e
         else:
+            coordinator.data.user = response.data.user
+            coordinator.async_update_listeners()
             return asdict(response.data)
 
     async def get_tasks(call: ServiceCall) -> ServiceResponse:
