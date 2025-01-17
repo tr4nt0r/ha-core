@@ -19,6 +19,7 @@ from . import PlaystationNetworkConfigEntry, PlaystationNetworkCoordinator
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
+PARALLEL_UPDATES = 0
 
 
 class PlatformType(StrEnum):
@@ -32,7 +33,6 @@ PLATFORM_MAP = {
     PlatformType.PS5: "PlayStation 5",
     PlatformType.PS4: "PlayStation 4",
 }
-PARALLEL_UPDATES = 0
 
 
 async def async_setup_entry(
