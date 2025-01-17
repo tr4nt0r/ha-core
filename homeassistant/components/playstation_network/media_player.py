@@ -10,6 +10,7 @@ from homeassistant.components.media_player import (
     MediaType,
 )
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -18,8 +19,6 @@ from . import PlaystationNetworkConfigEntry, PlaystationNetworkCoordinator
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
-
-PLATFORM_MAP = {"PS5": "PlayStation 5", "PS4": "PlayStation 4"}
 PARALLEL_UPDATES = 0
 
 
@@ -30,6 +29,12 @@ class PlatformType(StrEnum):
     PS4 = "PS4"
 
 
+PLATFORM_MAP = {
+    PlatformType.PS5: "PlayStation 5",
+    PlatformType.PS4: "PlayStation 4",
+}
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     config_entry: PlaystationNetworkConfigEntry,
@@ -37,23 +42,34 @@ async def async_setup_entry(
 ) -> None:
     """Media Player Entity Setup."""
     coordinator = config_entry.runtime_data
+    devices_added: set[PlatformType] = set()
+    supported_devices = {PlatformType.PS4, PlatformType.PS5}
+    device_reg = dr.async_get(hass)
+    entities = []
 
     @callback
     def add_entities() -> None:
-        if coordinator.data.platform is None:
-            username = coordinator.data.username
-            _LOGGER.warning(
-                "No console found associated with account: %s. -- Pending creation when available",
-                username,
-            )
-            return
+        nonlocal devices_added
 
-        async_add_entities(
-            MediaPlayer(coordinator, platform)
-            for platform in coordinator.data.registered_platforms
-        )
+        if not supported_devices - devices_added:
+            remove_listener()
 
-    coordinator.async_add_listener(add_entities)
+        if (platform := coordinator.data.platform["platform"]) and (
+            platform_type := PlatformType(platform)
+        ) not in devices_added:
+            async_add_entities([MediaPlayer(coordinator, platform_type)])
+            devices_added.add(platform_type)
+
+    for platform in supported_devices:
+        if device_reg.async_get_device(
+            identifiers={(DOMAIN, f"{coordinator.config_entry.unique_id}_{platform}")}
+        ):
+            entities.append(MediaPlayer(coordinator, platform))
+            devices_added.add(platform)
+    if entities:
+        async_add_entities(entities)
+
+    remove_listener = coordinator.async_add_listener(add_entities)
     add_entities()
 
 
@@ -62,9 +78,10 @@ class MediaPlayer(CoordinatorEntity[PlaystationNetworkCoordinator], MediaPlayerE
 
     _attr_media_image_remotely_accessible = True
     _attr_media_content_type = MediaType.GAME
+    _attr_translation_key = "playstation"
 
     def __init__(
-        self, coordinator: PlaystationNetworkCoordinator, platform: str
+        self, coordinator: PlaystationNetworkCoordinator, platform: PlatformType
     ) -> None:
         """Initialize PSN MediaPlayer."""
         super().__init__(coordinator)
