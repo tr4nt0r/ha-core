@@ -80,8 +80,9 @@ class MediaPlayer(CoordinatorEntity[PlaystationNetworkCoordinator], MediaPlayerE
     _attr_media_content_type = MediaType.GAME
     _attr_device_class = MediaPlayerDeviceClass.RECEIVER
     _attr_translation_key = "playstation"
-    _attr_has_entity_name = True
+    _attr_device_class = MediaPlayerDeviceClass.RECEIVER
     _attr_name = None
+    _attr_has_entity_name = True
 
     def __init__(
         self, coordinator: PlaystationNetworkCoordinator, platform: PlatformType
