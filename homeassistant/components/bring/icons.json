@@ -35,6 +35,9 @@
   "services": {
     "send_message": {
       "service": "mdi:cellphone-message"
+    },
+    "import_recipe": {
+      "service": "mdi:food-variant"
     }
   }
 }

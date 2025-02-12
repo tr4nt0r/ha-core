@@ -144,6 +144,15 @@
     },
     "notify_request_failed": {
       "message": "Failed to send push notification for Bring! due to a connection error, try again later"
+    },
+    "recipe_import_failed": {
+      "message": "Recipe import failed — the page may be missing structured recipe data or there was a connection error."
+    },
+    "entry_not_found": {
+      "message": "The selected Bring! account is not configured in Home Assistant."
+    },
+    "entry_not_loaded": {
+      "message": "The selected Bring! account is currently not loaded or disabled in Home Assistant."
     }
   },
   "services": {
@@ -162,6 +171,20 @@
         "item": {
           "name": "Item (Required if notification type 'Urgent message' is selected)",
           "description": "Item name(s) to include in an urgent message e.g. 'Attention! Attention! - We still urgently need: [Items]'"
+        }
+      }
+    },
+    "import_recipe": {
+      "name": "Import recipe",
+      "description": "Imports a recipe from an URL to the 'My recipes' collection in Bring!.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Bring! account",
+          "description": "Choose the Bring! account where the recipe should be imported."
+        },
+        "recipe_url": {
+          "name": "Recipe URL",
+          "description": "Enter the URL of the recipe to import to the 'My recipes' collection."
         }
       }
     }

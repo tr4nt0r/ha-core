@@ -8,11 +8,16 @@ from bring_api import Bring
 
 from homeassistant.const import CONF_EMAIL, CONF_PASSWORD, Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.typing import ConfigType
 
+from .const import DOMAIN
 from .coordinator import BringConfigEntry, BringDataUpdateCoordinator
+from .services import async_setup_services
 
 PLATFORMS: list[Platform] = [Platform.EVENT, Platform.SENSOR, Platform.TODO]
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -36,3 +41,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: BringConfigEntry) -> boo
 async def async_unload_entry(hass: HomeAssistant, entry: BringConfigEntry) -> bool:
     """Unload a config entry."""
     return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+
+
+async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+    """Set up the Bring! services."""
+
+    async_setup_services(hass)
+    return True

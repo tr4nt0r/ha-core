@@ -1,0 +1,158 @@
+{
+  "name": "Frenck's Peanut Stir-Fry",
+  "author": "Frenck's recipe blog",
+  "tagline": "Total time approx. 35 minutes",
+  "linkOutUrl": "https://frencks-recipes.com/peanut-stir-fry.html",
+  "imageUrl": "https://img.frencks-recipes.com/peanut-stir-fry.jpg",
+  "imageWidth": 960,
+  "imageHeight": 720,
+  "items": [
+    { "itemId": "Tofu", "spec": "1 pack (200 g)", "stock": false },
+    {
+      "itemId": "Bell pepper(s)",
+      "spec": "1",
+      "altIcon": "Chili pepper",
+      "altSection": "Früchte & Gemüse",
+      "stock": false
+    },
+    { "itemId": "Mushrooms", "spec": "250g", "stock": false },
+    {
+      "itemId": "Onion(s)",
+      "spec": "1",
+      "altIcon": "Onions",
+      "altSection": "Früchte & Gemüse",
+      "stock": false
+    },
+    {
+      "itemId": "Garlic clove(s)",
+      "spec": "1",
+      "altIcon": "Garlic",
+      "altSection": "Früchte & Gemüse",
+      "stock": false
+    },
+    {
+      "itemId": "Peanut butter",
+      "spec": "3 tbsp",
+      "altIcon": "Hazelnut spread",
+      "altSection": "Snacks & Sweets",
+      "stock": false
+    },
+    { "itemId": "Soy sauce", "spec": "3 tbsp", "stock": false },
+    {
+      "itemId": "Vegetable broth",
+      "spec": "200ml",
+      "altIcon": "Bouillon",
+      "altSection": "Zutaten & Gewürze",
+      "stock": false
+    },
+    {
+      "itemId": "Oat milk (Oat drink)",
+      "spec": "300ml, or soy drink",
+      "altIcon": "Milk",
+      "altSection": "Dairy & Cheese",
+      "stock": false
+    },
+    { "itemId": "Salt and pepper", "altIcon": "Salt", "stock": true },
+    {
+      "itemId": "Curry powder",
+      "altIcon": "Paprika powder",
+      "altSection": "Zutaten & Gewürze",
+      "stock": false
+    },
+    {
+      "itemId": "Chili powder",
+      "altIcon": "Paprika powder",
+      "altSection": "Zutaten & Gewürze",
+      "stock": false
+    },
+    { "itemId": "Parsley", "spec": "optional", "stock": false },
+    {
+      "itemId": "Coconut oil",
+      "altIcon": "Oil",
+      "altSection": "Zutaten & Gewürze",
+      "stock": false
+    }
+  ],
+  "yield": "4",
+  "baseQuantity": 4,
+  "time": "PT35M",
+  "ingredients": [
+    { "itemId": "Tofu", "spec": "1 pack (200 g)", "stock": false },
+    {
+      "itemId": "Bell pepper(s)",
+      "spec": "1",
+      "altIcon": "Chili pepper",
+      "altSection": "Früchte & Gemüse",
+      "stock": false
+    },
+    { "itemId": "Mushrooms", "spec": "250g", "stock": false },
+    {
+      "itemId": "Onion(s)",
+      "spec": "1",
+      "altIcon": "Onions",
+      "altSection": "Früchte & Gemüse",
+      "stock": false
+    },
+    {
+      "itemId": "Garlic clove(s)",
+      "spec": "1",
+      "altIcon": "Garlic",
+      "altSection": "Früchte & Gemüse",
+      "stock": false
+    },
+    {
+      "itemId": "Peanut butter",
+      "spec": "3 tbsp",
+      "altIcon": "Hazelnut spread",
+      "altSection": "Snacks & Süsswaren",
+      "stock": false
+    },
+    { "itemId": "Soy sauce", "spec": "3 tbsp", "stock": false },
+    {
+      "itemId": "Vegetable broth",
+      "spec": "200ml",
+      "altIcon": "Bouillon",
+      "altSection": "Zutaten & Gewürze",
+      "stock": false
+    },
+    {
+      "itemId": "Oat milk (Oat drink)",
+      "spec": "300ml, or soy drink",
+      "altIcon": "Milk",
+      "altSection": "Milch & Käse",
+      "stock": false
+    },
+    { "itemId": "Salt and pepper", "altIcon": "Salt", "stock": true },
+    {
+      "itemId": "Curry powder",
+      "altIcon": "Paprika powder",
+      "altSection": "Zutaten & Gewürze",
+      "stock": false
+    },
+    {
+      "itemId": "Chili powder",
+      "altIcon": "Paprika powder",
+      "altSection": "Zutaten & Gewürze",
+      "stock": false
+    },
+    { "itemId": "Parsley", "spec": "optional", "stock": false },
+    {
+      "itemId": "Coconut oil",
+      "altIcon": "Oil",
+      "altSection": "Zutaten & Gewürze",
+      "stock": false
+    }
+  ],
+  "likeCount": 38,
+  "tags": [
+    "bring_recipe_parser",
+    "Gemüse",
+    "bring_mealDiet_vegetarian",
+    "bring_mealType_easy",
+    "Pilze",
+    "vegan",
+    "bring_mealType_mainCourse",
+    "gekocht"
+  ],
+  "enableQuantityChange": true
+}

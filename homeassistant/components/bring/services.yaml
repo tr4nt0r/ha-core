@@ -21,3 +21,14 @@ send_message:
       required: false
       selector:
         text:
+import_recipe:
+  fields:
+    config_entry_id:
+      required: true
+      selector:
+        config_entry:
+          integration: bring
+    recipe_url:
+      required: true
+      selector:
+        text:

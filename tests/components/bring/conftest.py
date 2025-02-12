@@ -9,6 +9,7 @@ from bring_api import (
     BringAuthResponse,
     BringItemsResponse,
     BringListResponse,
+    BringTemplate,
     BringUserSettingsResponse,
     BringUsersResponse,
 )
@@ -68,7 +69,12 @@ def mock_bring_client() -> Generator[AsyncMock]:
         client.get_list_users.return_value = BringUsersResponse.from_json(
             load_fixture("users.json", DOMAIN)
         )
-
+        client.parse_recipe.return_value = BringTemplate.from_json(
+            load_fixture("recipe.json", DOMAIN)
+        )
+        client.create_template.return_value = BringTemplate.from_json(
+            load_fixture("recipe.json", DOMAIN)
+        )
         yield client
 
 
