@@ -8,3 +8,5 @@ ATTR_VALUE2 = "value2"
 ATTR_VALUE3 = "value3"
 
 SLEEP_EVENT = "sleep_event"
+
+ALARM_LABEL_DEFAULT = "alarm"

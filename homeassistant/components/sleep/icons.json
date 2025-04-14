@@ -22,6 +22,14 @@
       "apnea_alarm": {
         "default": "mdi:heart-pulse"
       }
+    },
+    "sensor": {
+      "alarm_time": {
+        "default": "mdi:alarm"
+      },
+      "alarm_label": {
+        "default": "mdi:label-outline"
+      }
     }
   }
 }

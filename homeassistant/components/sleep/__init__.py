@@ -22,7 +22,7 @@ from .const import (
     SLEEP_EVENT,
 )
 
-PLATFORMS: list[Platform] = [Platform.EVENT]
+PLATFORMS: list[Platform] = [Platform.EVENT, Platform.SENSOR]
 
 type SleepAsAndroidConfigEntry = ConfigEntry
 

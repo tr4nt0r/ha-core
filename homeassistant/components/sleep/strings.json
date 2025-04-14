@@ -109,6 +109,17 @@
           }
         }
       }
+    },
+    "sensor": {
+      "alarm_time": {
+        "name": "Alarm time"
+      },
+      "alarm_label": {
+        "name": "Alarm label",
+        "state": {
+          "alarm": "Alarm"
+        }
+      }
     }
   }
 }

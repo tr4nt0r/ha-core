@@ -1,6 +1,8 @@
 """Test the Sleep as Android event platform."""
 
+from collections.abc import Generator
 from http import HTTPStatus
+from unittest.mock import patch
 
 from freezegun.api import freeze_time
 import pytest
@@ -13,12 +15,22 @@ from homeassistant.components.sleep.const import (
     ATTR_VALUE3,
 )
 from homeassistant.config_entries import ConfigEntryState
-from homeassistant.const import STATE_UNKNOWN
+from homeassistant.const import STATE_UNKNOWN, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 
 from tests.common import MockConfigEntry, snapshot_platform
 from tests.typing import ClientSessionGenerator
+
+
+@pytest.fixture(autouse=True)
+def event_only() -> Generator[None]:
+    """Enable only the event platform."""
+    with patch(
+        "homeassistant.components.sleep.PLATFORMS",
+        [Platform.EVENT],
+    ):
+        yield
 
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
