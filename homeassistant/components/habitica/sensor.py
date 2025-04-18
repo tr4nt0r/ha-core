@@ -39,7 +39,7 @@ from homeassistant.util import dt as dt_util
 
 from .const import ASSETS_URL, DOMAIN
 from .coordinator import HabiticaConfigEntry, HabiticaDataUpdateCoordinator
-from .entity import HabiticaBase
+from .entity import HabiticaBase, HabiticaPartyMember
 from .util import get_attribute_points, get_attributes_total, inventory_list
 
 _LOGGER = logging.getLogger(__name__)
@@ -324,7 +324,8 @@ async def async_setup_entry(
 ) -> None:
     """Set up the habitica sensors."""
 
-    coordinator = config_entry.runtime_data
+    coordinator = config_entry.runtime_data.me
+    party_coordinator = config_entry.runtime_data.party
     ent_reg = er.async_get(hass)
     entities: list[SensorEntity] = []
     description: SensorEntityDescription
@@ -377,6 +378,13 @@ async def async_setup_entry(
     for description in TASK_SENSOR_DESCRIPTION:
         add_deprecated_entity(description, HabiticaTaskSensor)
 
+    entities.extend(
+        HabiticaPartyMemberSensor(config_entry.runtime_data, description, member.id)
+        for member in party_coordinator.data.members
+        if member.id and member.id != coordinator.data.user.id
+        for description in SENSOR_DESCRIPTIONS
+    )
+
     async_add_entities(entities, True)
 
 
@@ -410,6 +418,47 @@ class HabiticaSensor(HabiticaBase, SensorEntity):
 
         if self.entity_description.key is HabiticaSensorEntity.DISPLAY_NAME and (
             img_url := self.coordinator.data.user.profile.imageUrl
+        ):
+            return img_url
+
+        if entity_picture := self.entity_description.entity_picture:
+            return (
+                entity_picture
+                if entity_picture.startswith("data:image")
+                else f"{ASSETS_URL}{entity_picture}"
+            )
+
+        return None
+
+
+class HabiticaPartyMemberSensor(HabiticaPartyMember, SensorEntity):
+    """A Habitica party member sensor."""
+
+    entity_description: HabiticaSensorEntityDescription
+
+    @property
+    def native_value(self) -> StateType:
+        """Return the state of the device."""
+
+        return self.entity_description.value_fn(self.member, self.content)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, float | None] | None:
+        """Return entity specific state attributes."""
+        if func := self.entity_description.attributes_fn:
+            return func(self.member, self.content)
+        return None
+
+    @property
+    def entity_picture(self) -> str | None:
+        """Return the entity picture to use in the frontend, if any."""
+        if self.entity_description.key is HabiticaSensorEntity.CLASS and (
+            _class := self.member.stats.Class
+        ):
+            return SVG_CLASS[_class]
+
+        if self.entity_description.key is HabiticaSensorEntity.DISPLAY_NAME and (
+            img_url := self.member.profile.imageUrl
         ):
             return img_url
 

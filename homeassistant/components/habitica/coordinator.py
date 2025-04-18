@@ -21,6 +21,7 @@ from habiticalib import (
     TooManyRequestsError,
     UserData,
 )
+from habiticalib.typedefs import GroupData
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_NAME
@@ -39,6 +40,14 @@ _LOGGER = logging.getLogger(__name__)
 
 
 @dataclass
+class HabiticaRuntimeData:
+    """Holds the coordinators."""
+
+    me: HabiticaDataUpdateCoordinator
+    party: HabiticaPartyCoordinator
+
+
+@dataclass
 class HabiticaData:
     """Habitica data."""
 
@@ -46,7 +55,15 @@ class HabiticaData:
     tasks: list[TaskData]
 
 
-type HabiticaConfigEntry = ConfigEntry[HabiticaDataUpdateCoordinator]
+@dataclass
+class HabiticaParty:
+    """Habitica Party data."""
+
+    party: GroupData
+    members: list[UserData]
+
+
+type HabiticaConfigEntry = ConfigEntry[HabiticaRuntimeData]
 
 
 class HabiticaDataUpdateCoordinator(DataUpdateCoordinator[HabiticaData]):
@@ -172,3 +189,49 @@ class HabiticaDataUpdateCoordinator(DataUpdateCoordinator[HabiticaData]):
         await self.habitica.generate_avatar(fp=png, avatar=avatar, fmt="PNG")
 
         return png.getvalue()
+
+
+class HabiticaPartyCoordinator(DataUpdateCoordinator[HabiticaParty]):
+    """Habitica Party Coordinator."""
+
+    config_entry: HabiticaConfigEntry
+
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        config_entry: HabiticaConfigEntry,
+        habitica: Habitica,
+    ) -> None:
+        """Initialize the Habitica party coordinator."""
+        super().__init__(
+            hass,
+            _LOGGER,
+            config_entry=config_entry,
+            name=DOMAIN,
+            update_interval=timedelta(minutes=20),
+        )
+        self.habitica = habitica
+
+    async def _async_update_data(self) -> HabiticaParty:
+        """Fetch the latest party data."""
+
+        try:
+            party = (await self.habitica.get_group()).data
+            members = (await self.habitica.get_group_members(public_fields=True)).data
+        except TooManyRequestsError:
+            _LOGGER.debug("Rate limit exceeded, will try again later")
+            return self.data
+        except HabiticaException as e:
+            raise UpdateFailed(
+                translation_domain=DOMAIN,
+                translation_key="service_call_exception",
+                translation_placeholders={"reason": str(e.error.message)},
+            ) from e
+        except ClientError as e:
+            raise UpdateFailed(
+                translation_domain=DOMAIN,
+                translation_key="service_call_exception",
+                translation_placeholders={"reason": str(e)},
+            ) from e
+        else:
+            return HabiticaParty(party, members)
