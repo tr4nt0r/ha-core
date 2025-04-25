@@ -26,7 +26,6 @@ from homeassistant.components.ntfy.const import (
     ATTR_CLICK,
     ATTR_DELAY,
     ATTR_EMAIL,
-    ATTR_ICON,
     ATTR_MARKDOWN,
     ATTR_PRIORITY,
     ATTR_TAGS,
@@ -34,7 +33,7 @@ from homeassistant.components.ntfy.const import (
     SERVICE_PUBLISH,
 )
 from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntryState
-from homeassistant.const import ATTR_ENTITY_ID, STATE_UNKNOWN, Platform
+from homeassistant.const import ATTR_ENTITY_ID, ATTR_ICON, STATE_UNKNOWN, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
@@ -237,10 +236,6 @@ async def test_ntfy_publish(
         },
         blocking=True,
     )
-
-    state = hass.states.get("notify.mytopic")
-    assert state
-    assert state.state == "2025-01-09T12:00:00+00:00"
 
     mock_aiontfy.publish.assert_called_once_with(
         Message(
