@@ -92,3 +92,63 @@ publish:
           type: url
           autocomplete: url
       example: https://example.org/logo.png
+    actions:
+      collapsed: true
+      fields:
+        action1:
+          default:
+            action: http
+            label: Close door
+            url: https://api.mygarage.local/
+            method: POST
+            headers: { "Authorization": "Bearer zAzsx1sk.." }
+            body: '{"action": "close"}'
+            clear: true
+          required: false
+          selector:
+            object:
+              label_field: "label"
+              description_field: "action"
+              multiple: false
+              fields:
+                action:
+                  label: Action
+                  selector:
+                    select:
+                      options:
+                        - value: http
+                          label: HTTP
+                        - value: view
+                          label: View
+                        - value: broadcast
+                          label: Broadcast
+                      mode: dropdown
+                      sort: true
+                label:
+                  label: Label
+                  selector:
+                    text:
+                percentage:
+                  label: Percentage
+                  selector:
+                    number:
+                      unit_of_measurement: "%"
+        action2:
+          default:
+            action: view
+            label: View camera
+            url: https://mycamera.local/
+            clear: true
+          required: false
+          selector:
+            object:
+        action3:
+          default:
+            action: broadcast
+            label: Take picture
+            intent: io.heckel.ntfy.USER_ACTION
+            extras: { "cmd": "pic", "camera": "front" }
+            clear: true
+          required: false
+          selector:
+            object:

@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 from datetime import timedelta
-from typing import TYPE_CHECKING, cast
+import logging
+from typing import TYPE_CHECKING, Any, cast
 
 from aiontfy import Message
 from aiontfy.exceptions import NtfyException, NtfyHTTPError
+from mashumaro.exceptions import InvalidFieldValue
 import voluptuous as vol
 from yarl import URL
 
@@ -33,6 +35,7 @@ from .const import (
 )
 from .coordinator import NtfyConfigEntry
 
+_LOGGER = logging.getLogger(__name__)
 SERVICE_PUBLISH_SCHEMA = vol.Schema(
     {
         vol.Required(ATTR_ENTITY_ID): cv.entity_id,
@@ -50,6 +53,9 @@ SERVICE_PUBLISH_SCHEMA = vol.Schema(
         vol.Optional(ATTR_EMAIL): vol.Email(),
         vol.Optional(ATTR_CALL): cv.string,
         vol.Optional(ATTR_ICON): vol.All(vol.Url(), vol.Coerce(URL)),
+        vol.Optional("action1"): dict[str, Any],
+        vol.Optional("action2"): dict[str, Any],
+        vol.Optional("action3"): dict[str, Any],
     }
 )
 
@@ -74,6 +80,13 @@ def async_setup_services(hass: HomeAssistant) -> None:
                 translation_domain=DOMAIN,
                 translation_key="entity_not_found",
             )
+        params["actions"] = []
+        if action1 := params.pop("action1", None):
+            params["actions"] += [action1]
+        if action2 := params.pop("action2", None):
+            params["actions"] += [action2]
+        if action3 := params.pop("action3", None):
+            params["actions"] += [action3]
 
         config_entry_id = entity.config_entry_id
         subentry_id = entity.config_subentry_id
@@ -90,9 +103,16 @@ def async_setup_services(hass: HomeAssistant) -> None:
             )
 
         ntfy = config_entry.runtime_data.ntfy
-        topic: str = config_entry.subentries[subentry_id].data[CONF_TOPIC]
+        params["topic"] = config_entry.subentries[subentry_id].data[CONF_TOPIC]
+        try:
+            msg = Message.from_dict(params)
+        except InvalidFieldValue as e:
+            _LOGGER.debug("Invalid field value: %s", repr(e))
+            raise ServiceValidationError(
+                translation_key="invalid_action_button",
+                translation_domain=DOMAIN,
+            ) from e
 
-        msg = Message(topic=topic, **params)
         try:
             await ntfy.publish(msg)
         except NtfyHTTPError as e:

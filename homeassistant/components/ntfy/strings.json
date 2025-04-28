@@ -227,6 +227,9 @@
     },
     "entry_not_loaded": {
       "message": "The selected ntfy service is currently not loaded or disabled in Home Assistant."
+    },
+    "invalid_action_button": {
+      "message": "The syntax for the action button is incorrect. Refer to the documentation for help."
     }
   },
   "services": {
@@ -281,6 +284,24 @@
         "icon": {
           "name": "Icon URL",
           "description": "Include an icon that will appear next to the text of the notification. Only JPEG and PNG images are supported."
+        },
+        "action1": {
+          "name": "Button action",
+          "description": "Add a `view`, `broadcast`, or `http` button action to the notification."
+        },
+        "action2": {
+          "name": "[%key:component::ntfy::services::publish::fields::action1::name%]",
+          "description": "[%key:component::ntfy::services::publish::fields::action1::description%]"
+        },
+        "action3": {
+          "name": "[%key:component::ntfy::services::publish::fields::action1::name%]",
+          "description": "[%key:component::ntfy::services::publish::fields::action1::description%]"
+        }
+      },
+      "sections": {
+        "actions": {
+          "name": "Action buttons",
+          "description": "Add up to 3 'view', 'broadcast', or 'http' action buttons to the notification. See the documentation for details:  https://docs.ntfy.sh/publish/#action-buttons"
         }
       }
     }
