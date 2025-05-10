@@ -50,16 +50,26 @@ rules:
   # Gold
   devices: done
   diagnostics: done
-  discovery-update-info: todo
-  discovery: todo
-  docs-data-update: todo
-  docs-examples: todo
-  docs-known-limitations: todo
-  docs-supported-devices: todo
-  docs-supported-functions: todo
-  docs-troubleshooting: todo
-  docs-use-cases: todo
-  dynamic-devices: todo
+  discovery-update-info:
+    status: exempt
+    comment: integration has no discoverable devices
+  discovery:
+    status: exempt
+    comment: integration has no discoverable devices
+  docs-data-update:
+    status: exempt
+    comment: the integration currently does not fetch or receive data
+  docs-examples: done
+  docs-known-limitations: done
+  docs-supported-devices:
+    status: exempt
+    comment: integration has no devices
+  docs-supported-functions: done
+  docs-troubleshooting: done
+  docs-use-cases: done
+  dynamic-devices:
+    status: exempt
+    comment: integration has no devices
   entity-category: done
   entity-device-class:
     status: exempt
