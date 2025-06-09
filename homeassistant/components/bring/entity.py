@@ -26,7 +26,7 @@ class BringBaseEntity(CoordinatorEntity[BringBaseCoordinator]):
 
         self._list_uuid = bring_list.listUuid
 
-        self.device_info = DeviceInfo(
+        self._attr_device_info = DeviceInfo(
             entry_type=DeviceEntryType.SERVICE,
             name=bring_list.name,
             identifiers={
