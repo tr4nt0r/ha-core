@@ -172,6 +172,19 @@
       "message": "Failed to connect to ntfy service due to a connection timeout"
     }
   },
+  "issues": {
+    "topic_protected": {
+      "title": "Topic {topic} is protected",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "[%key:component::ntfy::issues::topic_protected::title%]",
+            "description": "Cannot subscribe to topic `{topic}` because it is protected. Click **OK** to deactivate the entity `{entity_id}`."
+          }
+        }
+      }
+    }
+  },
   "selector": {
     "priority": {
       "options": {
