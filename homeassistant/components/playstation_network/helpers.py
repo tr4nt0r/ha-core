@@ -8,7 +8,7 @@ from typing import Any
 
 from psnawp_api import PSNAWP
 from psnawp_api.models.client import Client
-from psnawp_api.models.trophies import PlatformType, TrophySummary
+from psnawp_api.models.trophies import PlatformType, TrophySummary, TrophyTitle
 from psnawp_api.models.user import User
 from pyrate_limiter import Duration, Rate
 
@@ -56,6 +56,7 @@ class PlaystationNetwork:
         self.hass = hass
         self.user: User
         self.legacy_profile: dict[str, Any] | None = None
+        self.game_titles: list[str] = []
 
     async def get_user(self) -> User:
         """Get the user object from the PlayStation Network."""
@@ -81,6 +82,12 @@ class PlaystationNetwork:
         data.trophy_summary = self.client.trophy_summary()
         data.profile = self.user.profile()
 
+        trophies = {
+            np_communication_id: set(
+                self.client.trophies(np_communication_id, PlatformType.PS5)
+            )
+            for np_communication_id in self.game_titles
+        }
         # check legacy platforms if owned
         if LEGACY_PLATFORMS & data.registered_platforms:
             self.legacy_profile = self.client.get_profile_legacy()
@@ -152,3 +159,14 @@ class PlaystationNetwork:
                     status=game_title_info["onlineStatus"],
                 )
         return data
+
+
+def fmt_game_title(title: TrophyTitle) -> str:
+    """Format game title for selector."""
+
+    return (
+        str(title.title_name)
+        .removesuffix("Trophy Set")
+        .removesuffix("Trophies")
+        .strip()
+    )

@@ -33,6 +33,35 @@
       "unique_id_mismatch": "The provided NPSSO token corresponds to the account {wrong_account}. Please re-authenticate with the account **{name}**"
     }
   },
+  "config_subentries": {
+    "game": {
+      "step": {
+        "user": {
+          "title": "Game title",
+          "description": "Track the progress of a game title you are playing",
+          "data": {
+            "np_communication_id": "Game title",
+            "include_trophies": "Include game trophies"
+          },
+          "data_description": {
+            "np_communication_id": "Select the game you want to track the progress for",
+            "include_trophies": "Enable this option to track detailed trophy progress. If disabled, only a trophy summary is available."
+          }
+        }
+      },
+      "initiate_flow": {
+        "user": "Add game title"
+      },
+      "entry_type": "Game title",
+      "error": {
+        "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
+        "unknown": "[%key:common::config_flow::error::unknown%]"
+      },
+      "abort": {
+        "already_configured": "Game title is already configured"
+      }
+    }
+  },
   "exceptions": {
     "not_ready": {
       "message": "Authentication to the PlayStation Network failed."

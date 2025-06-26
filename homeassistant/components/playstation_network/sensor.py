@@ -8,7 +8,8 @@ from enum import StrEnum
 from typing import TYPE_CHECKING
 
 from homeassistant.components.sensor import SensorEntity, SensorEntityDescription
-from homeassistant.const import PERCENTAGE
+from homeassistant.config_entries import ConfigSubentry
+from homeassistant.const import CONF_NAME, PERCENTAGE
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
@@ -43,6 +44,10 @@ class PlaystationNetworkSensor(StrEnum):
     EARNED_TROPHIES_SILVER = "earned_trophies_silver"
     EARNED_TROPHIES_BRONZE = "earned_trophies_bronze"
     ONLINE_ID = "online_id"
+    AVAILABLE_TROPHIES_PLATINUM = "available_trophies_platinum"
+    AVAILABLE_TROPHIES_GOLD = "available_trophies_gold"
+    AVAILABLE_TROPHIES_SILVER = "available_trophies_silver"
+    AVAILABLE_TROPHIES_BRONZE = "available_trophies_bronze"
 
 
 SENSOR_DESCRIPTIONS: tuple[PlaystationNetworkSensorEntityDescription, ...] = (
@@ -104,6 +109,18 @@ SENSOR_DESCRIPTIONS: tuple[PlaystationNetworkSensorEntityDescription, ...] = (
     ),
 )
 
+GAME_SENSOR_DESCRIPTIONS: tuple[PlaystationNetworkSensorEntityDescription, ...] = (
+    PlaystationNetworkSensorEntityDescription(
+        key=PlaystationNetworkSensor.EARNED_TROPHIES_PLATINUM,
+        translation_key=PlaystationNetworkSensor.EARNED_TROPHIES_PLATINUM,
+        value_fn=(
+            lambda psn: psn.trophy_summary.earned_trophies.platinum
+            if psn.trophy_summary
+            else None
+        ),
+    ),
+)
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -116,6 +133,15 @@ async def async_setup_entry(
         PlaystationNetworkSensorEntity(coordinator, description)
         for description in SENSOR_DESCRIPTIONS
     )
+
+    for subentry_id, subentry in config_entry.subentries.items():
+        async_add_entities(
+            [
+                PlaystationNetworkGameSensorEntity(coordinator, description, subentry)
+                for description in GAME_SENSOR_DESCRIPTIONS
+            ],
+            config_subentry_id=subentry_id,
+        )
 
 
 class PlaystationNetworkSensorEntity(
@@ -132,9 +158,10 @@ class PlaystationNetworkSensorEntity(
         self,
         coordinator: PlaystationNetworkCoordinator,
         description: PlaystationNetworkSensorEntityDescription,
+        context: str | None = None,
     ) -> None:
         """Initialize a sensor entity."""
-        super().__init__(coordinator)
+        super().__init__(coordinator, context)
         self.entity_description = description
         if TYPE_CHECKING:
             assert coordinator.config_entry.unique_id
@@ -166,3 +193,26 @@ class PlaystationNetworkSensorEntity(
             )
 
         return super().entity_picture
+
+
+class PlaystationNetworkGameSensorEntity(PlaystationNetworkSensorEntity):
+    """Representation of a PlayStation Network Game Title sensor entity."""
+
+    def __init__(
+        self,
+        coordinator: PlaystationNetworkCoordinator,
+        description: PlaystationNetworkSensorEntityDescription,
+        subentry: ConfigSubentry,
+    ) -> None:
+        """Initialize a sensor entity."""
+        super().__init__(coordinator, description, subentry.unique_id)
+
+        self._attr_unique_id = f"{coordinator.config_entry.unique_id}_{subentry.unique_id}_{description.key}"
+        self._attr_device_info = DeviceInfo(
+            identifiers={
+                (DOMAIN, f"{coordinator.config_entry.unique_id}_{subentry.unique_id}")
+            },
+            name=subentry.data[CONF_NAME],
+            entry_type=DeviceEntryType.SERVICE,
+            via_device=(DOMAIN, coordinator.config_entry.entry_id),
+        )
