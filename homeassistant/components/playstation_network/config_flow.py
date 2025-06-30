@@ -10,7 +10,6 @@ from psnawp_api.core.psnawp_exceptions import (
     PSNAWPInvalidTokenError,
     PSNAWPNotFoundError,
 )
-from psnawp_api.models.user import User
 from psnawp_api.utils.misc import parse_npsso_token
 import voluptuous as vol
 
@@ -42,7 +41,7 @@ class PlaystationNetworkConfigFlow(ConfigFlow, domain=DOMAIN):
             else:
                 psn = PlaystationNetwork(self.hass, npsso)
                 try:
-                    user: User = await psn.get_user()
+                    await psn.async_setup()
                 except PSNAWPAuthenticationError:
                     errors["base"] = "invalid_auth"
                 except PSNAWPNotFoundError:
@@ -53,10 +52,10 @@ class PlaystationNetworkConfigFlow(ConfigFlow, domain=DOMAIN):
                     _LOGGER.exception("Unexpected exception")
                     errors["base"] = "unknown"
                 else:
-                    await self.async_set_unique_id(user.account_id)
+                    await self.async_set_unique_id(psn.user.account_id)
                     self._abort_if_unique_id_configured()
                     return self.async_create_entry(
-                        title=user.online_id,
+                        title=psn.user.online_id,
                         data={CONF_NPSSO: npsso},
                     )
 
@@ -98,7 +97,7 @@ class PlaystationNetworkConfigFlow(ConfigFlow, domain=DOMAIN):
             try:
                 npsso = parse_npsso_token(user_input[CONF_NPSSO])
                 psn = PlaystationNetwork(self.hass, npsso)
-                user: User = await psn.get_user()
+                await psn.async_setup()
             except PSNAWPAuthenticationError:
                 errors["base"] = "invalid_auth"
             except (PSNAWPNotFoundError, PSNAWPInvalidTokenError):
@@ -109,10 +108,10 @@ class PlaystationNetworkConfigFlow(ConfigFlow, domain=DOMAIN):
                 _LOGGER.exception("Unexpected exception")
                 errors["base"] = "unknown"
             else:
-                await self.async_set_unique_id(user.account_id)
+                await self.async_set_unique_id(psn.user.account_id)
                 self._abort_if_unique_id_mismatch(
                     description_placeholders={
-                        "wrong_account": user.online_id,
+                        "wrong_account": psn.user.online_id,
                         CONF_NAME: entry.title,
                     }
                 )

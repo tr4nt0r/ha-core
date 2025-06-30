@@ -58,53 +58,33 @@ SENSOR_DESCRIPTIONS: tuple[PlaystationNetworkSensorEntityDescription, ...] = (
     PlaystationNetworkSensorEntityDescription(
         key=PlaystationNetworkSensor.TROPHY_LEVEL,
         translation_key=PlaystationNetworkSensor.TROPHY_LEVEL,
-        value_fn=(
-            lambda psn: psn.trophy_summary.trophy_level if psn.trophy_summary else None
-        ),
+        value_fn=lambda psn: psn.trophy_summary.trophy_level,
     ),
     PlaystationNetworkSensorEntityDescription(
         key=PlaystationNetworkSensor.TROPHY_LEVEL_PROGRESS,
         translation_key=PlaystationNetworkSensor.TROPHY_LEVEL_PROGRESS,
-        value_fn=(
-            lambda psn: psn.trophy_summary.progress if psn.trophy_summary else None
-        ),
+        value_fn=lambda psn: psn.trophy_summary.progress,
         native_unit_of_measurement=PERCENTAGE,
     ),
     PlaystationNetworkSensorEntityDescription(
         key=PlaystationNetworkSensor.EARNED_TROPHIES_PLATINUM,
         translation_key=PlaystationNetworkSensor.EARNED_TROPHIES_PLATINUM,
-        value_fn=(
-            lambda psn: psn.trophy_summary.earned_trophies.platinum
-            if psn.trophy_summary
-            else None
-        ),
+        value_fn=lambda psn: psn.trophy_summary.earned_trophies.platinum,
     ),
     PlaystationNetworkSensorEntityDescription(
         key=PlaystationNetworkSensor.EARNED_TROPHIES_GOLD,
         translation_key=PlaystationNetworkSensor.EARNED_TROPHIES_GOLD,
-        value_fn=(
-            lambda psn: psn.trophy_summary.earned_trophies.gold
-            if psn.trophy_summary
-            else None
-        ),
+        value_fn=lambda psn: psn.trophy_summary.earned_trophies.gold,
     ),
     PlaystationNetworkSensorEntityDescription(
         key=PlaystationNetworkSensor.EARNED_TROPHIES_SILVER,
         translation_key=PlaystationNetworkSensor.EARNED_TROPHIES_SILVER,
-        value_fn=(
-            lambda psn: psn.trophy_summary.earned_trophies.silver
-            if psn.trophy_summary
-            else None
-        ),
+        value_fn=lambda psn: psn.trophy_summary.earned_trophies.silver,
     ),
     PlaystationNetworkSensorEntityDescription(
         key=PlaystationNetworkSensor.EARNED_TROPHIES_BRONZE,
         translation_key=PlaystationNetworkSensor.EARNED_TROPHIES_BRONZE,
-        value_fn=(
-            lambda psn: psn.trophy_summary.earned_trophies.bronze
-            if psn.trophy_summary
-            else None
-        ),
+        value_fn=lambda psn: psn.trophy_summary.earned_trophies.bronze,
     ),
     PlaystationNetworkSensorEntityDescription(
         key=PlaystationNetworkSensor.ONLINE_ID,

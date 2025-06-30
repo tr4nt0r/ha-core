@@ -50,7 +50,7 @@ class PlaystationNetworkCoordinator(DataUpdateCoordinator[PlaystationNetworkData
         """Set up the coordinator."""
 
         try:
-            await self.psn.get_user()
+            await self.psn.async_setup()
         except PSNAWPAuthenticationError as error:
             raise ConfigEntryAuthFailed(
                 translation_domain=DOMAIN,

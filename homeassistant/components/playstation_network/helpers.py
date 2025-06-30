@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from functools import partial
+from dataclasses import dataclass
 from typing import Any
 
 from psnawp_api import PSNAWP
@@ -19,30 +18,30 @@ from .const import SUPPORTED_PLATFORMS
 LEGACY_PLATFORMS = {PlatformType.PS3, PlatformType.PS4}
 
 
-@dataclass
+@dataclass(kw_only=True, frozen=True)
 class SessionData:
     """Dataclass representing console session data."""
 
-    platform: PlatformType = PlatformType.UNKNOWN
+    platform: PlatformType
     title_id: str | None = None
     title_name: str | None = None
     format: PlatformType | None = None
     media_image_url: str | None = None
-    status: str = ""
+    status: str
 
 
-@dataclass
+@dataclass(kw_only=True, frozen=True)
 class PlaystationNetworkData:
     """Dataclass representing data retrieved from the Playstation Network api."""
 
-    presence: dict[str, Any] = field(default_factory=dict)
-    username: str = ""
-    account_id: str = ""
+    presence: dict[str, Any]
+    username: str
+    account_id: str
     availability: str = "unavailable"
-    active_sessions: dict[PlatformType, SessionData] = field(default_factory=dict)
-    registered_platforms: set[PlatformType] = field(default_factory=set)
-    trophy_summary: TrophySummary | None = None
-    profile: dict[str, Any] = field(default_factory=dict)
+    active_sessions: dict[PlatformType, SessionData]
+    registered_platforms: set[PlatformType]
+    trophy_summary: TrophySummary
+    profile: dict[str, Any]
 
 
 class PlaystationNetwork:
@@ -52,78 +51,89 @@ class PlaystationNetwork:
         """Initialize the class with the npsso token."""
         rate = Rate(300, Duration.MINUTE * 15)
         self.psn = PSNAWP(npsso, rate_limit=rate)
-        self.client: Client | None = None
+        self.client: Client
         self.hass = hass
         self.user: User
-        self.legacy_profile: dict[str, Any] | None = None
 
-    async def get_user(self) -> User:
+    def _setup(self) -> None:
+        """Initialize the PSN Client."""
+
+        self.user = self.psn.user(online_id="me")
+        self.client = self.psn.me()
+
+    async def async_setup(self) -> bool:
         """Get the user object from the PlayStation Network."""
-        self.user = await self.hass.async_add_executor_job(
-            partial(self.psn.user, online_id="me")
-        )
-        return self.user
+        await self.hass.async_add_executor_job(self._setup)
+        return True
 
-    def retrieve_psn_data(self) -> PlaystationNetworkData:
+    def retrieve_psn_data(
+        self,
+    ) -> tuple[
+        set[PlatformType],
+        dict[str, Any],
+        TrophySummary,
+        dict[str, Any],
+        dict[str, Any] | None,
+    ]:
         """Bundle api calls to retrieve data from the PlayStation Network."""
-        data = PlaystationNetworkData()
 
-        if not self.client:
-            self.client = self.psn.me()
-
-        data.registered_platforms = {
-            PlatformType(device["deviceType"])
-            for device in self.client.get_account_devices()
-        } & SUPPORTED_PLATFORMS
-
-        data.presence = self.user.get_presence()
-
-        data.trophy_summary = self.client.trophy_summary()
-        data.profile = self.user.profile()
-
-        # check legacy platforms if owned
-        if LEGACY_PLATFORMS & data.registered_platforms:
-            self.legacy_profile = self.client.get_profile_legacy()
-        return data
+        return (
+            (
+                registered_platforms := {
+                    PlatformType(device["deviceType"])
+                    for device in self.client.get_account_devices()
+                }
+                & SUPPORTED_PLATFORMS
+            ),
+            self.user.get_presence(),
+            self.client.trophy_summary(),
+            self.user.profile(),
+            (
+                self.client.get_profile_legacy()
+                if LEGACY_PLATFORMS & registered_platforms
+                else None
+            ),
+        )
 
     async def get_data(self) -> PlaystationNetworkData:
         """Get title data from the PlayStation Network."""
-        data = await self.hass.async_add_executor_job(self.retrieve_psn_data)
-        data.username = self.user.online_id
-        data.account_id = self.user.account_id
+        active_sessions: dict[PlatformType, SessionData] = {}
 
-        data.availability = data.presence["basicPresence"]["availability"]
+        (
+            registered_platforms,
+            presence,
+            trophy_summary,
+            profile,
+            legacy_profile,
+        ) = await self.hass.async_add_executor_job(self.retrieve_psn_data)
 
-        session = SessionData()
-        session.platform = PlatformType(
-            data.presence["basicPresence"]["primaryPlatformInfo"]["platform"]
-        )
-
-        if session.platform in SUPPORTED_PLATFORMS:
-            session.status = data.presence.get("basicPresence", {}).get(
-                "primaryPlatformInfo"
-            )["onlineStatus"]
-
-            game_title_info = data.presence.get("basicPresence", {}).get(
-                "gameTitleInfoList"
+        if (
+            platform := PlatformType(
+                presence["basicPresence"]["primaryPlatformInfo"]["platform"]
+            )
+        ) in SUPPORTED_PLATFORMS:
+            game_title_info = (
+                info[0]
+                if (info := presence["basicPresence"].get("gameTitleInfoList"))
+                else {}
             )
 
-            if game_title_info:
-                session.title_id = game_title_info[0]["npTitleId"]
-                session.title_name = game_title_info[0]["titleName"]
-                session.format = PlatformType(game_title_info[0]["format"])
-                if session.format in {PlatformType.PS5, PlatformType.PSPC}:
-                    session.media_image_url = game_title_info[0]["conceptIconUrl"]
-                else:
-                    session.media_image_url = game_title_info[0]["npTitleIconUrl"]
+            active_sessions[platform] = SessionData(
+                platform=platform,
+                title_id=game_title_info.get("npTitleId"),
+                title_name=game_title_info.get("titleName"),
+                format=PlatformType(game_title_info.get("format")),
+                media_image_url=game_title_info.get(
+                    "conceptIconUrl", game_title_info.get("npTitleIconUrl")
+                ),
+                status=presence["basicPresence"]["primaryPlatformInfo"]["onlineStatus"],
+            )
 
-            data.active_sessions[session.platform] = session
-
-        if self.legacy_profile:
-            presence = self.legacy_profile["profile"].get("presences", [])
-            if (game_title_info := presence[0] if presence else {}) and game_title_info[
-                "onlineStatus"
-            ] == "online":
+        if legacy_profile:
+            lgcy_presence = legacy_profile["profile"].get("presences", [])
+            if (
+                game_title_info := lgcy_presence[0] if lgcy_presence else {}
+            ) and game_title_info["onlineStatus"] == "online":
                 platform = PlatformType(game_title_info["platform"])
 
                 if platform is PlatformType.PS4:
@@ -138,7 +148,7 @@ class PlaystationNetwork:
                 else:
                     media_image_url = None
 
-                data.active_sessions[platform] = SessionData(
+                active_sessions[platform] = SessionData(
                     platform=platform,
                     title_id=game_title_info.get("npTitleId"),
                     title_name=game_title_info.get("titleName"),
@@ -146,4 +156,13 @@ class PlaystationNetwork:
                     media_image_url=media_image_url,
                     status=game_title_info["onlineStatus"],
                 )
-        return data
+        return PlaystationNetworkData(
+            presence=presence,
+            username=self.user.online_id,
+            account_id=self.user.account_id,
+            availability=presence["basicPresence"]["availability"],
+            active_sessions=active_sessions,
+            registered_platforms=registered_platforms,
+            trophy_summary=trophy_summary,
+            profile=profile,
+        )
