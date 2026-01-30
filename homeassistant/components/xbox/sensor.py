@@ -8,12 +8,15 @@ from datetime import UTC, datetime
 from enum import StrEnum
 from typing import TYPE_CHECKING, Any
 
+from pythonxbox.api.provider.achievements.models import Achievement360
 from pythonxbox.api.provider.people.models import Person
 from pythonxbox.api.provider.smartglass.models import SmartglassConsole, StorageDevice
 from pythonxbox.api.provider.titlehub.models import Title
 
 from homeassistant.components.sensor import (
     DOMAIN as SENSOR_DOMAIN,
+)
+from homeassistant.components.sensor import (
     EntityCategory,
     SensorDeviceClass,
     SensorEntity,
@@ -27,8 +30,9 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.typing import StateType
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN
+from .const import DOMAIN, SUBENTRY_TYPE_FRIEND, SUBENTRY_TYPE_GAME
 from .coordinator import (
+    XboxAchievements360Coordinator,
     XboxConfigEntry,
     XboxConsolesCoordinator,
     XboxTitleHistoryCoordinator,
@@ -77,6 +81,7 @@ class XboxSensor(StrEnum):
     PUBLISHER = "publisher"
     DEVELOPER = "developer"
     GENRES = "genres"
+    ACHIEVEMENT = "achievement"
 
 
 @dataclass(kw_only=True, frozen=True)
@@ -102,6 +107,16 @@ class XboxGameSensorEntityDescription(SensorEntityDescription):
     value_fn: Callable[[Title], StateType | datetime]
     attributes_fn: Callable[[Title], Mapping[str, Any] | None] | None = None
     entity_picture_fn: Callable[[Title], str | None] | None = None
+
+
+@dataclass(kw_only=True, frozen=True)
+class XboxAchievement360SensorEntityDescription(SensorEntityDescription):
+    """Xbox achievement sensor description."""
+
+    value_fn: Callable[[Achievement360, Achievement360 | None], StateType]
+    attributes_fn: Callable[
+        [Achievement360, Achievement360 | None], Mapping[str, Any] | None
+    ]
 
 
 def now_playing_attributes(_: Person, title: Title | None) -> dict[str, Any]:
@@ -354,11 +369,35 @@ GAME_SENSOR_DESCRIPTIONS: tuple[XboxGameSensorEntityDescription, ...] = (
         key=XboxSensor.GENRES,
         translation_key=XboxSensor.GENRES,
         value_fn=(
-            lambda x: ", ".join(x.detail.genres)
-            if x.detail and x.detail.genres
-            else None
+            lambda x: (
+                ", ".join(x.detail.genres) if x.detail and x.detail.genres else None
+            )
         ),
         entity_category=EntityCategory.DIAGNOSTIC,
+    ),
+)
+
+
+def achievement_attributes(
+    achievement: Achievement360, earned: Achievement360 | None
+) -> dict[str, Any]:
+    return {
+        "gamerscore": achievement.gamerscore,
+        "description": (
+            achievement.description if earned else achievement.locked_description
+        ),
+        "time_unlocked": None if earned is None else earned.time_unlocked,
+        "secret": achievement.is_secret,
+    }
+
+
+ACHIEVEMENT360_SENSOR_DESCRIPTIONS: tuple[XboxAchievement360SensorEntityDescription] = (
+    XboxAchievement360SensorEntityDescription(
+        key=XboxSensor.ACHIEVEMENT,
+        translation_key=XboxSensor.ACHIEVEMENT,
+        value_fn=lambda _, earned: 0 if earned is None else 100,
+        native_unit_of_measurement=PERCENTAGE,
+        attributes_fn=achievement_attributes,
     ),
 )
 
@@ -391,12 +430,13 @@ async def async_setup_entry(
                     hass, subentry.unique_id, description, SENSOR_DOMAIN
                 )
                 and subentry.unique_id in presence.data.presence
-                and subentry.subentry_type == "friend"
+                and subentry.subentry_type == SUBENTRY_TYPE_FRIEND
             ],
             config_subentry_id=subentry_id,
         )
 
     title_history = config_entry.runtime_data.title_history
+    achievements360 = config_entry.runtime_data.achievements360
     for subentry_id, subentry in config_entry.subentries.items():
         async_add_entities(
             [
@@ -404,7 +444,24 @@ async def async_setup_entry(
                 for description in GAME_SENSOR_DESCRIPTIONS
                 if subentry.unique_id
                 and subentry.unique_id in title_history.data
-                and subentry.subentry_type == "game"
+                and subentry.subentry_type == SUBENTRY_TYPE_GAME
+            ],
+            config_subentry_id=subentry_id,
+        )
+        async_add_entities(
+            [
+                XboxAchievement360SensorEntity(
+                    achievements360,
+                    title_history.data[subentry.unique_id],
+                    id,
+                    description,
+                )
+                for description in ACHIEVEMENT360_SENSOR_DESCRIPTIONS
+                if subentry.unique_id
+                and subentry.unique_id in title_history.data
+                and subentry.unique_id in achievements360.data.achievements360
+                and subentry.subentry_type == SUBENTRY_TYPE_GAME
+                for id in achievements360.data.achievements360[subentry.unique_id]
             ],
             config_subentry_id=subentry_id,
         )
@@ -511,7 +568,7 @@ class XboxStorageDeviceSensorEntity(
 class XboxGameSensorEntity(
     CoordinatorEntity[XboxTitleHistoryCoordinator], SensorEntity
 ):
-    """Representation of a Xbox presence state."""
+    """Representation of a Xbox game sensor entity."""
 
     _attr_has_entity_name = True
     entity_description: XboxGameSensorEntityDescription
@@ -574,3 +631,87 @@ class XboxGameSensorEntity(
             and (entity_picture := fn(self.data)) is not None
             else super().entity_picture
         )
+
+
+class XboxAchievement360SensorEntity(
+    CoordinatorEntity[XboxAchievements360Coordinator], SensorEntity
+):
+    """Representation of a Xbox achievements sensor entity."""
+
+    _attr_has_entity_name = True
+    entity_description: XboxAchievement360SensorEntityDescription
+
+    def __init__(
+        self,
+        coordinator: XboxAchievements360Coordinator,
+        title: Title,
+        achievement_id: int,
+        entity_description: XboxAchievement360SensorEntityDescription,
+    ) -> None:
+        """Initialize Xbox entity."""
+        super().__init__(coordinator)
+        self.xuid = coordinator.client.xuid
+        self.title_id = title.title_id
+        self.achievement_id = achievement_id
+        self.entity_description = entity_description
+
+        self._attr_unique_id = (
+            f"{coordinator.client.xuid}_{title.title_id}_{achievement_id}"
+        )
+
+        self._attr_device_info = DeviceInfo(
+            entry_type=DeviceEntryType.SERVICE,
+            identifiers={(DOMAIN, f"{coordinator.client.xuid}_{self.title_id}")},
+            manufacturer=(
+                (title.detail.developer_name or title.detail.publisher_name)
+                if title.detail
+                else None
+            ),
+            model=title.name,
+            name=title.name,
+            via_device=(DOMAIN, coordinator.client.xuid),
+        )
+
+    @property
+    def native_value(self) -> StateType | datetime:
+        """Return the state of the requested attribute."""
+        return self.entity_description.value_fn(
+            self.coordinator.data.achievements360[self.title_id][self.achievement_id],
+            self.coordinator.data.achievements360earned[self.title_id].get(
+                self.achievement_id
+            ),
+        )
+
+    @property
+    def extra_state_attributes(self) -> Mapping[str, float | None] | None:
+        """Return entity specific state attributes."""
+        return self.entity_description.attributes_fn(
+            self.coordinator.data.achievements360[self.title_id][self.achievement_id],
+            self.coordinator.data.achievements360earned[self.title_id].get(
+                self.achievement_id
+            ),
+        )
+
+    @property
+    def name(self) -> str:
+        """Return the name of the entity."""
+        return self.coordinator.data.achievements360[self.title_id][
+            self.achievement_id
+        ].name
+
+    @property
+    def entity_picture(self) -> str | None:
+        """Return the entity picture."""
+        achievement = self.coordinator.data.achievements360[self.title_id][
+            self.achievement_id
+        ]
+
+        earned = (
+            self.achievement_id
+            in self.coordinator.data.achievements360earned[self.title_id]
+        )
+        if (not achievement.is_secret) or earned:
+            return (
+                f"http://image.xboxlive.com/global/t.{int(self.title_id):x}"
+                f"/ach/0/{achievement.image_id:x}"
+            )

@@ -90,6 +90,12 @@
       },
       "total_gamerscore": {
         "default": "mdi:alpha-g-circle"
+      },
+      "achievement": {
+        "default": "mdi:lock",
+        "state": {
+          "100": "mdi:trophy-variant"
+        }
       }
     }
   }

@@ -26,7 +26,14 @@ from homeassistant.helpers.selector import (
     SelectSelectorConfig,
 )
 
-from .const import CONF_TITLE_ID, CONF_XUID, DOMAIN
+from .const import (
+    CONF_TITLE_ID,
+    CONF_XUID,
+    DOMAIN,
+    SUBENTRY_TYPE_FRIEND,
+    SUBENTRY_TYPE_GAME,
+    CONF_LEGACY_TITLE,
+)
 from .coordinator import XboxConfigEntry
 
 
@@ -57,8 +64,8 @@ class OAuth2FlowHandler(
     ) -> dict[str, type[ConfigSubentryFlow]]:
         """Return subentries supported by this integration."""
         return {
-            "friend": FriendSubentryFlowHandler,
-            "game": GameSubentryFlowHandler,
+            SUBENTRY_TYPE_FRIEND: FriendSubentryFlowHandler,
+            SUBENTRY_TYPE_GAME: GameSubentryFlowHandler,
         }
 
     async def async_step_user(
@@ -190,9 +197,13 @@ class GameSubentryFlowHandler(ConfigSubentryFlow):
 
         if user_input is not None:
             selected_title = title_history[user_input[CONF_TITLE_ID]]
+            is_legacy_title = (
+                selected_title.achievement
+                and selected_title.achievement.source_version == 1
+            )
             return self.async_create_entry(
                 title=selected_title.name,
-                data={},
+                data={CONF_LEGACY_TITLE: is_legacy_title},
                 unique_id=user_input[CONF_TITLE_ID],
             )
 
@@ -202,7 +213,10 @@ class GameSubentryFlowHandler(ConfigSubentryFlow):
                 label=game_title.name,
             )
             for game_title in title_history.values()
-            if game_title.achievement and game_title.achievement.source_version != 0
+            if game_title.achievement
+            and game_title.achievement.source_version != 0
+            and game_title.title_id
+            not in {t.unique_id for t in config_entry.subentries.values()}
         ]
 
         return self.async_show_form(

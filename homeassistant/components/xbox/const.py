@@ -7,3 +7,7 @@ OAUTH2_TOKEN = "https://login.live.com/oauth20_token.srf"
 
 CONF_XUID = "xuid"
 CONF_TITLE_ID = "title_id"
+CONF_LEGACY_TITLE = "legacy_title"
+
+SUBENTRY_TYPE_FRIEND = "friend"
+SUBENTRY_TYPE_GAME = "game"

@@ -2,15 +2,16 @@
 
 from __future__ import annotations
 
+import logging
 from abc import abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from http import HTTPStatus
-import logging
 from typing import ClassVar
 
 from httpx import HTTPStatusError, RequestError, TimeoutException
 from pythonxbox.api.client import XboxLiveClient
+from pythonxbox.api.provider.achievements.models import Achievement360
 from pythonxbox.api.provider.catalog.const import SYSTEM_PFN_ID_MAP
 from pythonxbox.api.provider.catalog.models import AlternateIdType, Product
 from pythonxbox.api.provider.people.models import Person
@@ -26,7 +27,7 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.device_registry import DeviceEntryType
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .const import DOMAIN
+from .const import DOMAIN, SUBENTRY_TYPE_GAME, CONF_LEGACY_TITLE
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -50,6 +51,14 @@ class XboxData:
 
 
 @dataclass
+class XboxAchievementsData:
+    """Xbox dataclass for achievements coordinator."""
+
+    achievements360: dict[str, dict[int, Achievement360]]
+    achievements360earned: dict[str, dict[int, Achievement360]]
+
+
+@dataclass
 class XboxCoordinators:
     """Xbox coordinators."""
 
@@ -57,6 +66,7 @@ class XboxCoordinators:
     status: XboxConsoleStatusCoordinator
     presence: XboxPresenceCoordinator
     title_history: XboxTitleHistoryCoordinator
+    achievements360: XboxAchievements360Coordinator
 
 
 class XboxBaseCoordinator[_DataT](DataUpdateCoordinator[_DataT]):
@@ -91,6 +101,7 @@ class XboxBaseCoordinator[_DataT](DataUpdateCoordinator[_DataT]):
         try:
             return await self.update_data()
         except TimeoutException as e:
+            _LOGGER.debug("Xbox exception:", exc_info=True)
             raise UpdateFailed(
                 translation_domain=DOMAIN,
                 translation_key="timeout_exception",
@@ -303,3 +314,49 @@ class XboxTitleHistoryCoordinator(XboxBaseCoordinator[dict[str, Title]]):
         )
 
         return {title.title_id: title for title in title_history.titles}
+
+
+class XboxAchievements360Coordinator(XboxBaseCoordinator[XboxAchievementsData]):
+    """Update achievements data."""
+
+    config_entry: XboxConfigEntry
+    _update_interval = timedelta(minutes=10)
+    achievements360: dict[str, dict[int, Achievement360]]
+
+    async def _async_setup(self) -> None:
+        """Set up the coordinator."""
+
+        self.achievements360 = {
+            game.unique_id: {
+                achievement.id: achievement
+                for achievement in (
+                    await self.client.achievements.get_achievements_xbox360_all(
+                        self.client.xuid, game.unique_id
+                    )
+                ).achievements
+            }
+            for game in self.config_entry.subentries.values()
+            if game.subentry_type == SUBENTRY_TYPE_GAME
+            and game.unique_id
+            and game.data[CONF_LEGACY_TITLE] is True
+        }
+
+    async def update_data(self) -> XboxAchievementsData:
+        """Fetch game title history data."""
+
+        achievements360earned = {
+            game.unique_id: {
+                achievement.id: achievement
+                for achievement in (
+                    await self.client.achievements.get_achievements_xbox360_earned(
+                        self.client.xuid, game.unique_id
+                    )
+                ).achievements
+            }
+            for game in self.config_entry.subentries.values()
+            if game.subentry_type == SUBENTRY_TYPE_GAME
+            and game.unique_id
+            and game.data[CONF_LEGACY_TITLE] is True
+        }
+
+        return XboxAchievementsData(self.achievements360, achievements360earned)

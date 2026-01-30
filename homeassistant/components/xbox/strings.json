@@ -70,6 +70,7 @@
     },
     "game": {
       "abort": {
+        "config_entry_not_loaded": "Cannot add game titles when the account is disabled or not loaded.",
         "no_game_titles": "Your game history is empty right now."
       },
       "entry_type": "Game",
@@ -123,6 +124,22 @@
       }
     },
     "sensor": {
+      "achievement": {
+        "state_attributes": {
+          "description": { "name": "Description" },
+          "gamerscore": {
+            "name": "[%key:component::xbox::entity::sensor::gamer_score::name%]"
+          },
+          "time_unlocked": { "name": "Time unlocked" },
+          "secret": {
+            "name": "Secret achievement",
+            "state": {
+              "true": "Yes",
+              "false": "No"
+            }
+          }
+        }
+      },
       "current_achievements": {
         "name": "Earned achievements",
         "unit_of_measurement": "achievements"
