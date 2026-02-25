@@ -34,6 +34,7 @@ async def test_setup(
     config_entry: MockConfigEntry,
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
+    device_registry: dr.DeviceRegistry,
 ) -> None:
     """Snapshot test states of sensor platform."""
 
@@ -45,13 +46,19 @@ async def test_setup(
 
     await snapshot_platform(hass, entity_registry, snapshot, config_entry.entry_id)
 
+    assert (
+        device := device_registry.async_get_device(
+            identifiers={(DOMAIN, f"{config_entry.entry_id}_1")}
+        )
+    )
+    assert device.configuration_url == "https://uptime.example.org/dashboard/1"
+
 
 @pytest.mark.usefixtures("entity_registry_enabled_by_default")
 async def test_migrate_unique_id(
     hass: HomeAssistant,
     config_entry: MockConfigEntry,
     mock_pythonkuma: AsyncMock,
-    snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
     freezer: FrozenDateTimeFactory,
     device_registry: dr.DeviceRegistry,

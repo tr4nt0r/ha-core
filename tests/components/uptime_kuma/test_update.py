@@ -7,10 +7,11 @@ import pytest
 from pythonkuma import UpdateException
 from syrupy.assertion import SnapshotAssertion
 
+from homeassistant.components.uptime_kuma.const import DOMAIN
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.const import STATE_UNAVAILABLE, Platform
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers import device_registry as dr, entity_registry as er
 
 from tests.common import MockConfigEntry, snapshot_platform
 from tests.typing import WebSocketGenerator
@@ -33,6 +34,7 @@ async def test_update(
     snapshot: SnapshotAssertion,
     entity_registry: er.EntityRegistry,
     hass_ws_client: WebSocketGenerator,
+    device_registry: dr.DeviceRegistry,
 ) -> None:
     """Test the update platform."""
     ws_client = await hass_ws_client(hass)
@@ -54,6 +56,12 @@ async def test_update(
     )
     result = await ws_client.receive_json()
     assert result["result"] == "**RELEASE_NOTES**"
+    assert (
+        device := device_registry.async_get_device(
+            identifiers={(DOMAIN, config_entry.entry_id)}
+        )
+    )
+    assert device.configuration_url == "https://uptime.example.org/dashboard"
 
 
 @pytest.mark.usefixtures("mock_pythonkuma")
