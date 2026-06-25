@@ -1829,9 +1829,6 @@ peblar==0.5.1
 # homeassistant.components.peco
 peco==0.1.2
 
-# homeassistant.components.pencom
-pencompy==0.0.4
-
 # homeassistant.components.escea
 pescea==1.0.12
 
