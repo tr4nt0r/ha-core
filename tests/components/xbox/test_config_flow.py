@@ -791,7 +791,11 @@ async def test_flow_reauth(
         },
     )
 
-    result = await hass.config_entries.flow.async_configure(result["flow_id"])
+    with patch(
+        "homeassistant.config_entries.ConfigEntries.async_reload",
+        return_value=None,
+    ) as mock_reload:
+        result = await hass.config_entries.flow.async_configure(result["flow_id"])
     await hass.async_block_till_done()
 
     assert len(hass.config_entries.async_entries(DOMAIN)) == 1
@@ -801,6 +805,9 @@ async def test_flow_reauth(
 
     assert config_entry.data["token"]["refresh_token"] == "new-refresh-token"
     assert config_entry.data["token"]["access_token"] == "new-access-token"
+
+    assert len(mock_reload.mock_calls) == 1
+    assert mock_reload.mock_calls[0][1][0] == config_entry.entry_id
 
 
 @pytest.mark.usefixtures(
