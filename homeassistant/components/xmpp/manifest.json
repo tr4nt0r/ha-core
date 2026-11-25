@@ -3,10 +3,11 @@
   "name": "XMPP",
   "categories": ["messaging_notifications.chat_apps"],
   "codeowners": ["@fabaff", "@flowolf"],
+  "config_flow": true,
   "connectivity": ["cloud", "network"],
   "documentation": "https://www.home-assistant.io/integrations/xmpp",
+  "integration_type": "service",
   "iot_class": "cloud_push",
   "loggers": ["pyasn1", "slixmpp"],
-  "quality_scale": "legacy",
   "requirements": ["slixmpp==1.17.0", "emoji==2.8.0"]
 }

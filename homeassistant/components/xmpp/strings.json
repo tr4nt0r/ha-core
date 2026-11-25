@@ -1,0 +1,93 @@
+{
+  "config": {
+    "abort": {
+      "already_configured": "[%key:common::config_flow::abort::already_configured_service%]"
+    },
+    "error": {
+      "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
+      "invalid_auth": "[%key:common::config_flow::error::invalid_auth%]",
+      "timeout_connect": "[%key:common::config_flow::error::timeout_connect%]",
+      "unknown": "[%key:common::config_flow::error::unknown%]"
+    },
+    "step": {
+      "user": {
+        "data": {
+          "password": "[%key:common::config_flow::data::password%]",
+          "sender": "XMPP address"
+        },
+        "data_description": {
+          "password": "The password for your XMPP account.",
+          "sender": "The XMPP address (Jabber ID or JID) of the account used to send messages. Include the domain, for example, `your_name@jabber.org`."
+        },
+        "sections": {
+          "connection": {
+            "data": {
+              "host": "[%key:common::config_flow::data::host%]",
+              "port": "[%key:common::config_flow::data::port%]",
+              "tls": "Use TLS",
+              "verify": "[%key:common::config_flow::data::verify_ssl%]"
+            },
+            "data_description": {
+              "host": "The hostname or IP address of the XMPP server.",
+              "port": "The port of the XMPP server. The default is 5222.",
+              "tls": "Enable TLS to encrypt the connection to the XMPP server.",
+              "verify": "[%key:common::config_flow::description::verify_ssl%]"
+            },
+            "description": "Manually specify the hostname for the XMPP server and connection settings.",
+            "name": "Hostname and connection settings"
+          }
+        }
+      }
+    }
+  },
+  "config_subentries": {
+    "chat": {
+      "abort": {
+        "already_configured": "Recipient is already configured"
+      },
+      "entry_type": "Chat",
+      "initiate_flow": {
+        "user": "Add chat"
+      },
+      "step": {
+        "user": {
+          "data": {
+            "recipient": "[%key:component::xmpp::config::step::user::data::sender%]"
+          },
+          "data_description": {
+            "recipient": "The XMPP address (Jabber ID or JID) of the recipient."
+          },
+          "description": "Set up a recipient for chat messages.",
+          "title": "Chat"
+        }
+      }
+    },
+    "groupchat": {
+      "abort": {
+        "already_configured": "Groupchat is already configured"
+      },
+      "entry_type": "Groupchat",
+      "initiate_flow": {
+        "user": "Add groupchat"
+      },
+      "step": {
+        "user": {
+          "data": {
+            "recipient": "[%key:component::xmpp::config::step::user::data::sender%]"
+          },
+          "data_description": {
+            "recipient": "The XMPP address (Jabber ID or JID) of the groupchat."
+          },
+          "description": "Set up a recipient for groupchat messages. The groupchat must exist and must be joined by the XMPP account used to send messages.",
+          "title": "Groupchat"
+        }
+      }
+    }
+  },
+  "issues": {
+    "deprecated_yaml_import_issue_error": {
+      "description": "YAML configuration for XMPP is being deprecated, but an error occurred while importing your existing configuration.\n\nVerify that the YAML configuration is valid, then restart Home Assistant to try again. Alternatively remove the XMPP YAML configuration from your `configuration.yaml` file and continue to [set up the integration]({url}) manually.\n\n**Configuration that could not be imported:**\n\n```{config}```",
+      "title": "Failed to import XMPP YAML configuration"
+    }
+  }
+}

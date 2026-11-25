@@ -1,0 +1,11 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "sections": {
+          "connection": "mdi:wan"
+        }
+      }
+    }
+  }
+}

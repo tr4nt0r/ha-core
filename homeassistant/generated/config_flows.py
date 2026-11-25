@@ -971,6 +971,7 @@ FLOWS = {
         "xiaomi_ble",
         "xiaomi_miio",
         "xiaomi_weather",
+        "xmpp",
         "xthings_cloud",
         "yale",
         "yale_smart_alarm",

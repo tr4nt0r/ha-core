@@ -17278,7 +17278,7 @@
     },
     "xmpp": {
       "name": "XMPP",
-      "integration_type": "hub",
+      "integration_type": "service",
       "categories": [
         "messaging_notifications.chat_apps"
       ],
@@ -17286,7 +17286,7 @@
         "cloud",
         "network"
       ],
-      "config_flow": false,
+      "config_flow": true,
       "iot_class": "cloud_push"
     },
     "xs1": {

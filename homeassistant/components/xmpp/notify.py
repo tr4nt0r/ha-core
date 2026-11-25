@@ -7,7 +7,7 @@ import mimetypes
 import pathlib
 import random
 import string
-from typing import Any, override
+from typing import TYPE_CHECKING, Any, override
 
 import probatio
 import requests
@@ -28,6 +28,7 @@ from homeassistant.components.notify import (
     PLATFORM_SCHEMA as NOTIFY_PLATFORM_SCHEMA,
     BaseNotificationService,
 )
+from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
 from homeassistant.const import (
     CONF_PASSWORD,
     CONF_RECIPIENT,
@@ -36,8 +37,12 @@ from homeassistant.const import (
     CONF_SENDER,
 )
 from homeassistant.core import HomeAssistant
+from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.helpers import config_validation as cv, template as template_helper
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+
+from .const import CONF_TLS, CONF_VERIFY, DEFAULT_RESOURCE, DOMAIN, XMPPSubentryType
+from .issue import async_deprecate_yaml_issue
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -48,11 +53,8 @@ ATTR_URL = "url"
 ATTR_URL_TEMPLATE = "url_template"
 ATTR_VERIFY = "verify"
 
-CONF_TLS = "tls"
-CONF_VERIFY = "verify"
 
 DEFAULT_CONTENT_TYPE = "application/octet-stream"
-DEFAULT_RESOURCE = "home-assistant"
 XEP_0363_TIMEOUT = 10
 
 PLATFORM_SCHEMA = NOTIFY_PLATFORM_SCHEMA.extend(
@@ -74,24 +76,74 @@ async def async_get_service(
     hass: HomeAssistant,
     config: ConfigType,
     discovery_info: DiscoveryInfoType | None = None,
-) -> XmppNotificationService:
+) -> XmppNotificationService | None:
     """Get the XMPP notification service."""
-    return XmppNotificationService(
-        config.get(CONF_SENDER),
-        config.get(CONF_RESOURCE),
-        config.get(CONF_PASSWORD),
-        config.get(CONF_RECIPIENT),
-        config.get(CONF_TLS),
-        config.get(CONF_VERIFY),
-        config.get(CONF_ROOM),
+    if config:
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN, context={"source": SOURCE_IMPORT}, data=config
+        )
+        if result.get("type") is FlowResultType.CREATE_ENTRY or (
+            result.get("type") is FlowResultType.ABORT
+            and result.get("reason") == "already_configured"
+        ):
+            async_deprecate_yaml_issue(hass, config)
+        else:
+            async_deprecate_yaml_issue(hass, config, import_success=False)
+        return None
+
+    if discovery_info is None:
+        return None
+
+    entry: ConfigEntry = discovery_info["entry"]
+
+    # Currently only one groupchat supported in legacy action,
+    # additional groupchat subentries are ignored
+    room = (
+        rooms[0].unique_id
+        if (rooms := entry.get_subentries_of_type(XMPPSubentryType.GROUPCHAT))
+        and rooms[0].unique_id is not None
+        else None
+    )
+
+    # Recipients are ignored in legacy action when a groupchat is configured
+    recipients = (
+        [
+            subentry.unique_id
+            for subentry in entry.get_subentries_of_type(XMPPSubentryType.CHAT)
+            if subentry.unique_id is not None
+        ]
+        if room is None
+        else [entry.data[CONF_SENDER]]
+    )
+
+    service = XmppNotificationService(
+        entry.data[CONF_SENDER],
+        entry.options[CONF_RESOURCE],
+        entry.data[CONF_PASSWORD],
+        recipients,
+        entry.data.get(CONF_TLS, True),
+        entry.data.get(CONF_VERIFY, True),
+        room,
         hass,
     )
+    entry.async_on_unload(service.async_unregister_services)
+    return service
 
 
 class XmppNotificationService(BaseNotificationService):
     """Implement the notification service for XMPP."""
 
-    def __init__(self, sender, resource, password, recipient, tls, verify, room, hass):
+    def __init__(
+        self,
+        sender: str,
+        resource: str,
+        password: str,
+        recipient: list[str],
+        tls: bool,
+        verify: bool,
+        room: str | None,
+        hass: HomeAssistant,
+    ) -> None:
         """Initialize the service."""
         self._hass = hass
         self._sender = sender
@@ -126,16 +178,16 @@ class XmppNotificationService(BaseNotificationService):
 
 
 async def async_send_message(  # noqa: C901
-    sender,
-    password,
-    recipients,
-    use_tls,
-    verify_certificate,
-    room,
-    hass,
-    message,
-    timeout=None,
-    data=None,
+    sender: str,
+    password: str,
+    recipients: list[str],
+    use_tls: bool,
+    verify_certificate: bool,
+    room: str | None,
+    hass: HomeAssistant,
+    message: str,
+    timeout: float | None = None,
+    data: dict[str, Any] | None = None,
 ):
     """Send a message over XMPP."""
 
@@ -242,6 +294,8 @@ async def async_send_message(  # noqa: C901
             upload a file with XMPP XEP_0363 from a remote URL or a local
             file path and return a URL of that file.
             """
+            if TYPE_CHECKING:
+                assert data
             if data.get(ATTR_URL_TEMPLATE):
                 _LOGGER.debug("Got url template: %s", data[ATTR_URL_TEMPLATE])
                 templ = template_helper.Template(data[ATTR_URL_TEMPLATE], hass)
@@ -270,6 +324,8 @@ async def async_send_message(  # noqa: C901
 
             uploaded via XEP_0363 and HTTP and returns the resulting URL
             """
+            if TYPE_CHECKING:
+                assert data
             _LOGGER.debug("Getting file from %s", url)
 
             def get_url(url):
@@ -319,6 +375,8 @@ async def async_send_message(  # noqa: C901
 
         async def upload_file_from_path(self, path: str, timeout=None):
             """Upload a file from a local file path via XEP_0363."""
+            if TYPE_CHECKING:
+                assert data
             _LOGGER.debug("Uploading file from path, %s", path)
 
             if not hass.config.is_allowed_path(path):
